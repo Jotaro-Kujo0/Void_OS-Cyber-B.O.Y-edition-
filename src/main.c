@@ -2,8 +2,8 @@
 #include "st7789.h"
 #include "widget.h"
 #include "screen.h"
-#include "screens/stat_screen.h"
-#include "screens/menu_screen.h"
+//#include "screens/stat_screen.h"
+//#include "screens/menu_screen.h"
 
 // Two framebuffers
 static uint16_t fb0[ST7789_WIDTH * ST7789_HEIGHT];
