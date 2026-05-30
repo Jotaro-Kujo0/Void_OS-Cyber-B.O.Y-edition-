@@ -1,4 +1,4 @@
-#include <Arduino.h>
+////#include <Arduino.h>
 #include "config.h"
 #include "UI/draw.h"
 #include "UI/theme.h"
@@ -9,13 +9,15 @@
 #include "hal/hal_input.h"
 #include "hal/hal_storage.h"
 #include "hal/hal_power.h"
-#include "apps/app_base.h"
-#include "apps/app_home.h"
-#include "apps/app_stat.h"
-#include "apps/app_radio.h"
-#include "apps/app_nfc.h"
-#include "apps/app_ir.h"
-#include "apps/app_sys.h"
+#include "Apps/app_base.h"
+#include "Apps/app_home.h"
+#include "Apps/app_stat.h"
+#include "Apps/app_radio.h"
+#include "Apps/app_nfc.h"
+#include "Apps/app_ir.h"
+#include "Apps/app_sys.h"
+#include "UI/character/sprite.h"
+#include "hal/hal_buttons_exp.h" // Handles PCF8574
 
 // ── App registry — one entry per app ─────────────────────────────────────
 static const AppDef APPS[APP_COUNT] = {

@@ -1,49 +1,21 @@
-#include "hal_battery.h"
-#include <Wire.h>
+#include <Arduino.h>
 #include <DFRobot_MAX17043.h>
+#include <Wire.h>
 
-static DFRobot_MAX17043 _fuel_gauge;
-static uint8_t _soc = 100;
-static uint16_t _voltage = 4200;
-static BatteryHealth _health = BAT_GOOD;
+DFRobot_MAX17043 _fuel_gauge;
 
 void hal_battery_init() {
-    // Initialize I2C (GPIO 21 SDA, 22 SCL)
-    Wire.begin(21, 22);
-    
-    // Initialize MAX17043 at default I2C address 0x36
-    if (!_fuel_gauge.begin(Wire, 0x36)) {
-        // Fallback: use default values if init fails
-        _soc = 50;
-        _voltage = 3700;
-        _health = BAT_WARN;
-    } else {
-        // Initial read
-        _soc = _fuel_gauge.getSOC();
-        _voltage = _fuel_gauge.getVoltage();
-    }
-}
-
-uint8_t hal_battery_soc() {
-    _soc = _fuel_gauge.getSOC();
-    return _soc;
+    _fuel_gauge.begin();
 }
 
 uint16_t hal_battery_voltage() {
-    _voltage = _fuel_gauge.getVoltage();
-    return _voltage;
+    return (uint16_t)_fuel_gauge.readVoltage();
 }
 
-BatteryHealth hal_battery_health() {
-    uint8_t soc = hal_battery_soc();
-    
-    if (soc < 10) {
-        _health = BAT_CRIT;
-    } else if (soc < 20) {
-        _health = BAT_WARN;
-    } else {
-        _health = BAT_GOOD;
-    }
-    
-    return _health;
+uint8_t hal_battery_soc() {
+    float voltage = _fuel_gauge.readVoltage();
+    // Simple LiPo battery map: 3.3V is 0%, 4.2V is 100%
+    // We constrain the value to keep it between 0-100%
+    uint8_t soc = map(constrain(voltage * 1000, 3300, 4200), 3300, 4200, 0, 100);
+    return soc;
 }

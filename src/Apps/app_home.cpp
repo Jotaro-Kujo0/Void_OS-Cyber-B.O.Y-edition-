@@ -1,6 +1,6 @@
 #include "app_home.h"
 #include "app_base.h"
-#include "ui/character/character.h"
+#include "UI/character/character.h"
 #include "UI/draw.h"
 #include "UI/theme.h"
 #include "UI/transition.h"

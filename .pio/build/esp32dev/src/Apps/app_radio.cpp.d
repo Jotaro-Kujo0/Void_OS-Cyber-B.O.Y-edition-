@@ -1,6 +1,6 @@
 .pio/build/esp32dev/src/Apps/app_radio.cpp.o: src/Apps/app_radio.cpp \
- src/Apps/app_radio.h src/UI/draw.h src/UI/theme.h src/config.h \
- src/os/scheduler.h .pio/libdeps/esp32dev/OneWire/OneWire.h \
+ src/Apps/app_radio.h src/Apps/../os/events.h src/Apps/../UI/draw.h \
+ src/Apps/../config.h \
  /home/codespace/.platformio/packages/framework-arduinoespressif32/cores/esp32/Arduino.h \
  /home/codespace/.platformio/packages/framework-arduinoespressif32/cores/esp32/esp_arduino_version.h \
  /home/codespace/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/freertos/include/freertos/FreeRTOS.h \
@@ -135,5 +135,4 @@
  /home/codespace/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/esp_hw_support/include/soc/esp32/spiram.h \
  /home/codespace/.platformio/packages/framework-arduinoespressif32/cores/esp32/io_pin_remap.h \
  /home/codespace/.platformio/packages/framework-arduinoespressif32/cores/esp32/Arduino.h \
- .pio/libdeps/esp32dev/OneWire/util/OneWire_direct_regtype.h \
- .pio/libdeps/esp32dev/DallasTemperature/DallasTemperature.h
+ src/UI/theme.h

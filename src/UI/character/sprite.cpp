@@ -1,65 +1,79 @@
-// sprite.cpp - JPG Asset Loading System
+//sprite.cpp
 #include "sprite.h"
-#include "../draw.h"
-#include "config.h"
-#include <Arduino.h>
+#include "../draw.h"     // Contains your verified draw_jpg()
+#include "../../config.h" // Centralized configurations
+#include <TFT_eSPI.h>
 
-// JPG asset filenames stored in /UI/assets/
-static const char* JPG_ASSETS[] = {
-    "/assets/IDLE.jpg",    // ANIM_IDLE
-    "/assets/IDLE.jpg",    // ANIM_BLINK (reuse IDLE for blink frames)
-    "/assets/IDLE.jpg",    // ANIM_HAPPY
-    "/assets/IDLE.jpg",    // ANIM_FOCUS
-    "/assets/IDLE.jpg",    // ANIM_ALERT
-    "/assets/IDLE.jpg",    // ANIM_TIRED
-    "/assets/IDLE.jpg",    // ANIM_CURIOUS
-};
+extern TFT_eSPI tft; // Access core global display instance
 
-// Animation frame timings (for frame sequencing)
-static const AnimClip CLIPS[ANIM_COUNT] = {
-    {0,  1, 8,  true },   // IDLE    - single frame, looping
-    {0,  1, 18, false},   // BLINK   - single frame, no loop
-    {0,  1, 10, false},   // HAPPY   - single frame
-    {0,  1, 10, false},   // FOCUS   - single frame
-    {0,  1, 12, true },   // ALERT   - single frame, looping
-    {0,  1, 5,  true },   // TIRED   - single frame, looping
-    {0,  1, 10, true },   // CURIOUS - single frame, looping
-};
+MascotEngine::MascotEngine() : _currentAppIndex(0), _state(STATE_IDLE) {}
 
-void sprite_init(SpritePlayer *p) {
-    p->current = p->queued = ANIM_IDLE;
-    p->frame   = 0;
-    p->last_ms = 0;
-    p->done    = false;
+void MascotEngine::init() {
+    // Initial draw to clean frame buffer
+    render();
 }
 
-void sprite_play(SpritePlayer *p, AnimID id, bool queue) {
-    if (queue && !p->done) { p->queued = id; return; }
-    p->current = id;
-    p->frame   = 0;
-    p->done    = false;
-    p->last_ms = millis();
-}
-
-void sprite_tick(SpritePlayer *p) {
-    const AnimClip &c = CLIPS[p->current];
-    if (millis() - p->last_ms < (uint32_t)(1000 / c.fps)) return;
-    p->last_ms = millis();
-    p->frame++;
-    if (p->frame >= c.count) {
-        p->frame = c.loop ? 0 : c.count - 1;
-        p->done  = !c.loop;
-        if (p->done && p->queued != p->current)
-            sprite_play(p, p->queued, false);
+const char* MascotEngine::getHeadAsset(uint8_t appIndex) {
+    if (_state == STATE_IDLE) {
+        return "/assets/IDLE.jpg"; // Default face
+    }
+    
+    // Map application ID directly to your asset tree
+    switch(appIndex) {
+        case 1:  return "/assets/STAT.jpg";     //
+        case 2:  return "/assets/MAP.jpg";      //
+        case 4:  return "/assets/RAD-O.jpg";    //
+        case 5:  return "/assets/DATA.jpg";     //
+        case 6:  return "/assets/MISC.jpg";     //
+        case 7:  return "/assets/Marauder.jpg"; //
+        default: return "/assets/IDLE.jpg";     // Fallback
     }
 }
 
-void sprite_draw(SpritePlayer *p, int dx, int dy) {
-    // Load and draw JPG asset for current animation
-    const char *asset_path = JPG_ASSETS[p->current];
+void MascotEngine::calculateEyeOffset(int8_t appIndex, int16_t &outX, int16_t &outY) {
+    // 8 distinct directions mapped to the circular rotary encoder positions
+    // Max pupil throw distance = 6 pixels inside the socket
+    const int8_t MAX_THROW = 6;
     
-    // Render JPG from SPIFFS /assets/ directory
-    draw_jpg(dx, dy, asset_path);
+    // Calculate angle based on menu index slot (8 slots total across 360 degrees)
+    float angle = (appIndex * 45.0f) * (PI / 180.0f);
+    
+    outX = (int16_t)(cos(angle) * MAX_THROW);
+    outY = (int16_t)(sin(angle) * MAX_THROW);
 }
 
-AnimID sprite_current(const SpritePlayer *p) { return p->current; }
+void MascotEngine::updateState(uint8_t appIndex, bool isSelected) {
+    _currentAppIndex = appIndex;
+    _state = isSelected ? STATE_APP_ACTIVE : STATE_IDLE;
+}
+
+void MascotEngine::render() {
+    // Layer 1: Render base body asset
+    draw_jpg(BODY_X, BODY_Y, "/assets/BODY.jpg"); //
+    
+    // Layer 2: Render contextual head asset over body boundary
+    const char* headPath = getHeadAsset(_currentAppIndex);
+    draw_jpg(HEAD_X, HEAD_Y, headPath);
+    
+    // Layer 3: Calculate and draw procedural eyes tracking the encoder
+    int16_t offsetX = 0;
+    int16_t offsetY = 0;
+    calculateEyeOffset(_currentAppIndex, offsetX, offsetY);
+    
+    // Configuration options for procedural eyes
+    const uint16_t EYE_SCLERA_COLOR = TFT_WHITE;
+    const uint16_t EYE_PUPIL_COLOR  = TFT_GREEN; // Phosphor green match
+    const int16_t SCLERA_RADIUS     = 10;
+    const int16_t PUPIL_RADIUS      = 4;
+    
+    // Draw Left Eye
+    tft.fillCircle(L_EYE_HOME_X, EYES_HOME_Y, SCLERA_RADIUS, EYE_SCLERA_COLOR);
+    tft.fillCircle(L_EYE_HOME_X + offsetX, EYES_HOME_Y + offsetY, PUPIL_RADIUS, EYE_PUPIL_COLOR);
+    
+    // Draw Right Eye
+    tft.fillCircle(R_EYE_HOME_X, EYES_HOME_Y, SCLERA_RADIUS, EYE_SCLERA_COLOR);
+    tft.fillCircle(R_EYE_HOME_X + offsetX, EYES_HOME_Y + offsetY, PUPIL_RADIUS, EYE_PUPIL_COLOR);
+}
+
+// Instantiate global handle
+MascotEngine Mascot;

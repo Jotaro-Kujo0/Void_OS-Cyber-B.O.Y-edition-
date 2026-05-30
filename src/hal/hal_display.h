@@ -1,8 +1,17 @@
 // hal_display.h
 #pragma once
 #include <stdint.h>
-#include <TFT_eSPI.h>
+#include <TFT_eSPI.h> // Include the TFT_eSPI library for display control
+// Arduino.h may not be available in non-Arduino build environments
+#ifdef ARDUINO
+#include <Arduino.h>
+#endif
 
+// Forward-declare TFT_eSPI to avoid pulling in TFT_eSPI.h and Arduino.h
+// from this header. The actual TFT_eSPI definition should be provided by the
+// HAL implementation or platform-specific source file.
+// Note: TFT_eSPI is exposed here for use by other files that need display access
+class TFT_eSPI;
 extern TFT_eSPI tft;
 
 void     hal_display_init();

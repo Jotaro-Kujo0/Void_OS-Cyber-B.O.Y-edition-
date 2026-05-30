@@ -1,5 +1,6 @@
 .pio/build/esp32dev/src/UI/draw.cpp.o: src/UI/draw.cpp src/UI/draw.h \
- src/hal/hal_display.h .pio/libdeps/esp32dev/TFT_eSPI/TFT_eSPI.h \
+ src/UI/theme.h src/config.h src/hal/hal_display.h \
+ .pio/libdeps/esp32dev/TFT_eSPI/TFT_eSPI.h \
  /home/codespace/.platformio/packages/framework-arduinoespressif32/cores/esp32/Arduino.h \
  /home/codespace/.platformio/packages/framework-arduinoespressif32/cores/esp32/esp_arduino_version.h \
  /home/codespace/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/freertos/include/freertos/FreeRTOS.h \
