@@ -1,6 +1,6 @@
 #include "app_sys.h"
-#include "ui/draw.h"
-#include "ui/theme.h"
+#include "UI/draw.h"
+#include "UI/theme.h"
 #include "hal/hal_storage.h"
 #include "hal/hal_power.h"
 #include "hal/hal_display.h"

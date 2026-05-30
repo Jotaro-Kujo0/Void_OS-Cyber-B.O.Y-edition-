@@ -1,0 +1,63 @@
+/*
+  Simple example for receiving with Rssi output.
+  
+  https://github.com/sui77/rc-switch/
+  https://github.com/LSatan/SmartRC-CC1101-Driver-Lib
+  ----------------------------------------------------------
+  Mod by Little Satan. Have Fun!
+  ----------------------------------------------------------
+*/
+#include <SmartRC_CC1101.h>
+#include <RCSwitch.h>
+
+int pin; // int for Receive pin.
+
+RCSwitch mySwitch = RCSwitch();
+SmartRC_CC1101 myRadio;
+
+void setup() {
+  Serial.begin(9600);
+
+#ifdef ESP32
+pin = 4;  // for esp32! Receiver on GPIO pin 4. 
+#elif ESP8266
+pin = 4;  // for esp8266! Receiver on pin 4 = D2.
+#else
+pin = 0;  // for Arduino! Receiver on interrupt 0 => that is pin #2
+#endif    
+
+  if (myRadio.getCC1101()){       // Check the CC1101 Spi connection.
+  Serial.println("Connection OK");
+  }else{
+  Serial.println("Connection Error");
+  }
+
+//CC1101 Settings:                (Settings with "//" are optional!)
+  myRadio.Init();            // must be set to initialize the cc1101!
+//myRadio.setRxBW(812.50);  // Set the Receive Bandwidth in kHz. Value from 58.03 to 812.50. Default is 812.50 kHz.
+//myRadio.setPA(10);       // set TxPower. The following settings are possible depending on the frequency band.  (-30  -20  -15  -10  -6    0    5    7    10   11   12)   Default is max!
+  myRadio.setMHZ(433.92); // Here you can set your basic frequency. The lib calculates the frequency automatically (default = 433.92).The cc1101 can: 300-348 MHZ, 387-464MHZ and 779-928MHZ. Read More info from datasheet.
+
+  mySwitch.enableReceive(pin);  // Receiver on
+
+  myRadio.SetRx();  // set Receive on
+  
+}
+void loop() {
+ 
+  if (mySwitch.available()){
+
+    Serial.print("Received ");
+    Serial.print( mySwitch.getReceivedValue() );
+    Serial.print(" / ");
+    Serial.print( mySwitch.getReceivedBitlength() );
+    Serial.print("bit ");
+    Serial.print("Protocol: ");
+    Serial.println( mySwitch.getReceivedProtocol() );
+     
+    Serial.print("RSSI: ");
+    Serial.println(myRadio.getRssi());
+    
+    mySwitch.resetAvailable();
+  }
+}

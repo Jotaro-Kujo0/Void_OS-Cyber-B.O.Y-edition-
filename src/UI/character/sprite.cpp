@@ -1,22 +1,29 @@
-// sprite.cpp
+// sprite.cpp - JPG Asset Loading System
 #include "sprite.h"
-#include "ui/draw.h"
+#include "../draw.h"
 #include "config.h"
 #include <Arduino.h>
 
-// ── Include the generated sprite sheet ────────────────────────────────────
-// Run tools/png_to_c.py to regenerate from your art:
-//   python tools/png_to_c.py art/sheet.png src/ui/character/sprite_data.h char_sheet
-#include "sprite_data.h"   // defines: char_sheet[], CHAR_SHEET_W, CHAR_SHEET_H
+// JPG asset filenames stored in /UI/assets/
+static const char* JPG_ASSETS[] = {
+    "/assets/IDLE.jpg",    // ANIM_IDLE
+    "/assets/IDLE.jpg",    // ANIM_BLINK (reuse IDLE for blink frames)
+    "/assets/IDLE.jpg",    // ANIM_HAPPY
+    "/assets/IDLE.jpg",    // ANIM_FOCUS
+    "/assets/IDLE.jpg",    // ANIM_ALERT
+    "/assets/IDLE.jpg",    // ANIM_TIRED
+    "/assets/IDLE.jpg",    // ANIM_CURIOUS
+};
 
+// Animation frame timings (for frame sequencing)
 static const AnimClip CLIPS[ANIM_COUNT] = {
-    {0,  3, 8,  true },   // IDLE    frames 0-2
-    {3,  3, 18, false},   // BLINK   frames 3-5  fast, no loop
-    {6,  2, 10, false},   // HAPPY   frames 6-7
-    {8,  2, 10, false},   // FOCUS   frames 8-9
-    {10, 3, 12, true },   // ALERT   frames 10-12 loop
-    {13, 2, 5,  true },   // TIRED   frames 13-14 slow
-    {15, 3, 10, true },   // CURIOUS frames 15-17
+    {0,  1, 8,  true },   // IDLE    - single frame, looping
+    {0,  1, 18, false},   // BLINK   - single frame, no loop
+    {0,  1, 10, false},   // HAPPY   - single frame
+    {0,  1, 10, false},   // FOCUS   - single frame
+    {0,  1, 12, true },   // ALERT   - single frame, looping
+    {0,  1, 5,  true },   // TIRED   - single frame, looping
+    {0,  1, 10, true },   // CURIOUS - single frame, looping
 };
 
 void sprite_init(SpritePlayer *p) {
@@ -48,12 +55,11 @@ void sprite_tick(SpritePlayer *p) {
 }
 
 void sprite_draw(SpritePlayer *p, int dx, int dy) {
-    uint8_t sheet_frame = CLIPS[p->current].start + p->frame;
-    int sx = (sheet_frame % SPRITE_COLS) * SPRITE_W;
-    int sy = (sheet_frame / SPRITE_COLS) * SPRITE_H;
-    draw_sprite(dx, dy, char_sheet,
-                sx, sy, SPRITE_W, SPRITE_H,
-                CHAR_SHEET_W, TRANSPARENT);
+    // Load and draw JPG asset for current animation
+    const char *asset_path = JPG_ASSETS[p->current];
+    
+    // Render JPG from SPIFFS /assets/ directory
+    draw_jpg(dx, dy, asset_path);
 }
 
 AnimID sprite_current(const SpritePlayer *p) { return p->current; }

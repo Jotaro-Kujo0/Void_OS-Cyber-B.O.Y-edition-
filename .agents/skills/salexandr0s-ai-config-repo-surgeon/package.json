@@ -1,0 +1,14 @@
+{
+  "name": "repo-surgeon",
+  "version": "1.0.0",
+  "description": "Deep structural audit and modernization skill for messy or prototype codebases",
+  "keywords": [
+    "pi-package"
+  ],
+  "license": "MIT",
+  "pi": {
+    "skills": [
+      "./"
+    ]
+  }
+}

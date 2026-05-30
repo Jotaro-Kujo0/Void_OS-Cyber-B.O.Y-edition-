@@ -1,0 +1,71 @@
+/*
+  Example for outlets which are configured with two rotary/sliding switches.
+  
+  https://github.com/sui77/rc-switch/
+  https://github.com/LSatan/SmartRC-CC1101-Driver-Lib
+  ----------------------------------------------------------
+  Mod by Little Satan. Have Fun!
+  ----------------------------------------------------------
+*/
+#include <SmartRC_CC1101.h>
+#include <RCSwitch.h>
+
+int pin; // int for Transmit pin.
+
+RCSwitch mySwitch = RCSwitch();
+SmartRC_CC1101 myRadio;
+
+void setup() {
+  Serial.begin(9600);
+
+#ifdef ESP32
+pin = 2;  // for esp32! Transmit on GPIO pin 2.
+#elif ESP8266
+pin = 5;  // for esp8266! Transmit on pin 5 = D1
+#else
+pin = 6;  // for Arduino! Transmit on pin 6.
+#endif 
+
+  if (myRadio.getCC1101()){       // Check the CC1101 Spi connection.
+  Serial.println("Connection OK");
+  }else{
+  Serial.println("Connection Error");
+  }
+
+//CC1101 Settings:                (Settings with "//" are optional!)
+  myRadio.Init();            // must be set to initialize the cc1101!
+//myRadio.setRxBW(812.50);  // Set the Receive Bandwidth in kHz. Value from 58.03 to 812.50. Default is 812.50 kHz.
+//myRadio.setPA(10);       // set TxPower. The following settings are possible depending on the frequency band.  (-30  -20  -15  -10  -6    0    5    7    10   11   12)   Default is max!
+  myRadio.setMHZ(433.92); // Here you can set your basic frequency. The lib calculates the frequency automatically (default = 433.92).The cc1101 can: 300-348 MHZ, 387-464MHZ and 779-928MHZ. Read More info from datasheet.
+ 
+  // Transmitter on 
+  mySwitch.enableTransmit(pin);
+
+  // cc1101 set Transmit on
+  myRadio.SetTx();
+  
+  // Optional set pulse length.
+  // mySwitch.setPulseLength(320);
+  
+}
+
+void loop() {
+
+  // Switch on:
+  // The first parameter represents the setting of the first rotary switch. 
+  // In this example it's switched to "1" or "A" or "I". 
+  // 
+  // The second parameter represents the setting of the second rotary switch. 
+  // In this example it's switched to "4" or "D" or "IV". 
+  mySwitch.switchOn(1, 4);
+
+  // Wait a second
+  delay(1000);
+  
+  // Switch off
+  mySwitch.switchOff(1, 4);
+  
+  // Wait another second
+  delay(1000);
+  
+}

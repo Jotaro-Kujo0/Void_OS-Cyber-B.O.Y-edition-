@@ -1,4 +1,4 @@
-// widget.h — the foundation of your entire UI
+// widget.h — the foundation of the UI
 #pragma once
 #include <stdint.h>
 #include <stdbool.h>

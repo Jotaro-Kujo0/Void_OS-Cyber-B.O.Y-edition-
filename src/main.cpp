@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include "config.h"
-#include "ui/draw.h"
-#include "ui/theme.h"
-#include "ui/transition.h"
+#include "UI/draw.h"
+#include "UI/theme.h"
+#include "UI/transition.h"
 #include "os/events.h"
 #include "os/scheduler.h"
 #include "hal/hal_display.h"

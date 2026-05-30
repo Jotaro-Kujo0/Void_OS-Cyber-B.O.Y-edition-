@@ -1,9 +1,20 @@
 // main.c
-#include "st7789.h"
+#include <stdint.h>
+#include <stdbool.h>
+
 #include "widget.h"
 #include "screen.h"
 //#include "screens/stat_screen.h"
 //#include "screens/menu_screen.h"
+
+#define ST7789_WIDTH 240
+#define ST7789_HEIGHT 240
+#define COLOR_BLACK 0x0000
+
+void st7789_init(void);
+void st7789_init_dma(void);
+bool st7789_flush_done(void);
+void st7789_flush_dma(const uint16_t *buffer);
 
 // Two framebuffers
 static uint16_t fb0[ST7789_WIDTH * ST7789_HEIGHT];
@@ -14,7 +25,7 @@ static uint16_t *front_buf = fb1;
 int main(void) {
     // --- Init hardware ---
     st7789_init();
-    gpio_init_buttons();   // your button/encoder setup
+    gpio_init_buttons();   //button/encoder setup
     st7789_init_dma();
 
     // --- Build first screen ---
@@ -28,7 +39,7 @@ int main(void) {
             back_buf[i] = COLOR_BLACK;
 
         // 2. Dispatch any queued input events
-        Event e = input_poll(); // reads from your ISR ring buffer
+        Event e = { .type = input_poll() }; // reads from your ISR ring buffer
         if (e.type != EVT_NONE) {
             if (e.type == EVT_BTN_B)
                 screen_pop();     // B always goes back

@@ -1,10 +1,11 @@
 #include "app_home.h"
 #include "app_base.h"
 #include "ui/character/character.h"
-#include "ui/draw.h"
-#include "ui/theme.h"
-#include "ui/transition.h"
+#include "UI/draw.h"
+#include "UI/theme.h"
+#include "UI/transition.h"
 #include "hal/hal_storage.h"
+#include "os/scheduler.h"
 #include "config.h"
 #include <stdio.h>
 
@@ -106,9 +107,7 @@ void app_home_draw() {
                        RA[i], _sel==RA[i], true);
 
     // Center character
-    int sx = CENTER_X + (CENTER_W - SPRITE_W) / 2;
-    int sy = STATS_H  + ((SCR_H-STATS_H-SPRITE_H) / 2);
-    character_draw(&_char, sx, sy);
+    character_draw(&_char);
 
     // Bottom hint
     draw_hline(0, SCR_H-16, SCR_W, T_BORDER);

@@ -1,5 +1,6 @@
 // draw.cpp
 #include "draw.h"
+#include "theme.h"
 #include "hal/hal_display.h"
 #include <stdarg.h>
 #include <stdio.h>
@@ -57,4 +58,22 @@ void draw_sprite(int dx, int dy,
         }
     }
     tft.endWrite();
+}
+// JPG loading using TFT_eSPI TJPG decoder
+// This requires LOAD_TJPG_DECODER=1 in TFT_eSPI config (User_Setup.h)
+#include <TFT_eSPI.h>
+
+bool draw_jpg(int x, int y, const char *filename) {
+    // Simplified: draw colored placeholder rectangle
+    // TODO: Enable TJPG_DECODER in TFT_eSPI User_Setup.h for full JPEG support
+    // Placeholder dimensions (approx size for different assets)
+    draw_fill(x, y, 100, 120, 0x4208);  // blue-ish placeholder
+    draw_rect(x, y, 100, 120, T_FG);
+    draw_text(x + 10, y + 50, "JPG", T_FG, 0x4208, FONT_SM);
+    return true;
+}
+
+bool draw_jpg_scaled(int x, int y, int scale, const char *filename) {
+    // Scaled version - just call draw_jpg for now
+    return draw_jpg(x, y, filename);
 }

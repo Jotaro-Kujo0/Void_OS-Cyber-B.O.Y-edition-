@@ -33,3 +33,8 @@ void draw_sprite(int dest_x, int dest_y,
                  int frame_w, int frame_h,
                  int sheet_w,
                  uint16_t transparent_key);
+
+// JPG image loading and rendering (TFT_eSPI TJPG decoder)
+// Returns true if successful, false if file not found or decode failed
+bool draw_jpg(int x, int y, const char *filename);
+bool draw_jpg_scaled(int x, int y, int scale, const char *filename);

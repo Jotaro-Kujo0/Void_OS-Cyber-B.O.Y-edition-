@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "author": "Jotaro Kujo",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-devkit-v1", "id": "esp", "top": 0, "left": 0, "attrs": {} },
+    { "type": "wokwi-ili9341", "id": "tft", "top": -120, "left": 180, "attrs": {} },
+    { "type": "wokwi-potentiometer", "id": "pot", "top": -100, "left": -150, "attrs": {} },
+    { "type": "wokwi-microsd-card", "id": "sd", "top": 120, "left": 180, "attrs": {} },
+    { "type": "wokwi-generic-ic", "id": "pcf8574", "top": 80, "left": -200, "attrs": {"name": "PCF8574", "pincount": 16} },
+    { "type": "wokwi-generic-ic", "id": "max17043", "top": -80, "left": -200, "attrs": {"name": "MAX17043", "pincount": 8} },
+    { "type": "wokwi-generic-ic", "id": "pn532", "top": -200, "left": -200, "attrs": {"name": "PN532", "pincount": 14} },
+    { "type": "wokwi-generic-ic", "id": "cc1101", "top": 200, "left": -100, "attrs": {"name": "CC1101", "pincount": 8} },
+    { "type": "wokwi-ir-receiver", "id": "ir_rx", "top": 0, "left": 350, "attrs": {} },
+    { "type": "wokwi-ir-transmitter", "id": "ir_tx", "top": 50, "left": 350, "attrs": {} },
+    { "type": "wokwi-ds18b20", "id": "temp", "top": -150, "left": 350, "attrs": {} }
+  ],
+  "connections": [
+    [ "esp:3V3", "tft:VCC", "red", [] ],
+    [ "esp:GND.1", "tft:GND", "black", [] ],
+    [ "esp:14", "tft:CS", "orange", [] ],
+    [ "esp:4", "tft:RESET", "green", [] ],
+    [ "esp:27", "tft:DC", "yellow", [] ],
+    [ "esp:23", "tft:MOSI", "blue", [] ],
+    [ "esp:18", "tft:SCK", "purple", [] ],
+    [ "esp:3V3", "tft:LED", "red", [] ],
+    [ "esp:19", "tft:MISO", "cyan", [] ],
+
+    [ "esp:3V3", "pot:VCC", "red", [] ],
+    [ "esp:GND.2", "pot:GND", "black", [] ],
+    [ "esp:34", "pot:SIG", "white", [] ],
+
+    [ "esp:3V3", "sd:VCC", "red", [] ],
+    [ "esp:GND.1", "sd:GND", "black", [] ],
+    [ "esp:5", "sd:CS", "orange", [] ],
+    [ "esp:18", "sd:SCK", "purple", [] ],
+    [ "esp:23", "sd:MOSI", "blue", [] ],
+    [ "esp:19", "sd:MISO", "cyan", [] ],
+
+    [ "esp:3V3", "pcf8574:VCC", "red", [] ],
+    [ "esp:GND.1", "pcf8574:GND", "black", [] ],
+    [ "esp:21", "pcf8574:SDA", "green", [] ],
+    [ "esp:22", "pcf8574:SCL", "yellow", [] ],
+
+    [ "esp:3V3", "max17043:VCC", "red", [] ],
+    [ "esp:GND.1", "max17043:GND", "black", [] ],
+    [ "esp:21", "max17043:SDA", "green", [] ],
+    [ "esp:22", "max17043:SCL", "yellow", [] ],
+
+    [ "esp:3V3", "pn532:VCC", "red", [] ],
+    [ "esp:GND.1", "pn532:GND", "black", [] ],
+    [ "esp:21", "pn532:SDA", "green", [] ],
+    [ "esp:22", "pn532:SCL", "yellow", [] ],
+    [ "esp:5", "pn532:IRQ", "orange", [] ],
+
+    [ "esp:18", "cc1101:SCK", "purple", [] ],
+    [ "esp:23", "cc1101:MOSI", "blue", [] ],
+    [ "esp:19", "cc1101:MISO", "cyan", [] ],
+    [ "esp:15", "cc1101:CS", "orange", [] ],
+    [ "esp:26", "cc1101:GDO0", "red", [] ],
+    [ "esp:3V3", "cc1101:VCC", "red", [] ],
+    [ "esp:GND.1", "cc1101:GND", "black", [] ],
+
+    [ "esp:35", "ir_rx:SIG", "white", [] ],
+    [ "esp:3V3", "ir_rx:VCC", "red", [] ],
+    [ "esp:GND.1", "ir_rx:GND", "black", [] ],
+
+    [ "esp:33", "ir_tx:SIG", "white", [] ],
+    [ "esp:3V3", "ir_tx:VCC", "red", [] ],
+    [ "esp:GND.1", "ir_tx:GND", "black", [] ],
+
+    [ "esp:2", "temp:DQ", "white", [] ],
+    [ "esp:3V3", "temp:VCC", "red", [] ],
+    [ "esp:GND.1", "temp:GND", "black", [] ],
+
+    [ "esp:16", "esp:RX2", "gray", [] ],
+    [ "esp:17", "esp:TX2", "gray", [] ]
+  ],
+  "dependencies": {}
+}

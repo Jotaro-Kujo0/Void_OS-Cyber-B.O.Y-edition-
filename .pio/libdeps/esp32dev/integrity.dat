@@ -1,0 +1,10 @@
+lsatan/SmartRC-CC1101-Driver-Lib @ ^3.0.2
+bodmer/TFT_eSPI @ ^2.5.43
+robtillaart/PCF8574 @ ^0.4.1
+milesburton/DallasTemperature @ ^3.9.1
+mikalhart/TinyGPSPlus @ ^1.0.3
+paulstoffregen/OneWire @ ^2.3.8
+crankyoldgit/IRremoteESP8266 @ ^2.8.6
+adafruit/Adafruit PN532 @ ^1.2.0
+dfrobot/DFRobot_MAX17043 @ ^1.0.0
+adafruit/Adafruit BusIO @ ^1.17.0

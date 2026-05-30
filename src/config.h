@@ -2,30 +2,34 @@
 #include <stdint.h>
 
 // ── Screen ────────────────────────────────────────────────────────────────
-#define SCR_W           480
+// BOM: ILI9341 240x320 (not 480x320)
+#define SCR_W           240
 #define SCR_H           320
 #define STATS_H          28    // top bar height
-#define PANEL_W         186    // left/right app panel width
-#define CENTER_X        186    // character panel left edge
-#define CENTER_W        108    // character panel width
-#define RIGHT_X         294    // right panel left edge
+#define PANEL_W          72    // left/right app panel width (240 - 2*72 = 96 center)
+#define CENTER_X         72    // character panel left edge
+#define CENTER_W         96    // character panel width
+#define RIGHT_X         168    // right panel left edge
 
 // ── GPIO ─────────────────────────────────────────────────────────────────
-#define PIN_POT          4
-#define PIN_BTN_A       38
-#define PIN_BTN_B       39
-#define PIN_BTN_C       40
-#define PIN_BL           6     // backlight PWM
-#define PIN_CC1101_CS   15
-#define PIN_CC1101_GDO0 16
-#define PIN_PN532_CS     5
-#define PIN_IR_RX       41
-#define PIN_IR_TX       42
-#define PIN_ONEWIRE      2
-// SPI2 shared bus (CC1101 + PN532)
-#define PIN_SPI2_MOSI   35
-#define PIN_SPI2_MISO   36
-#define PIN_SPI2_SCK    37
+// BOM: ESP32-WROOM-32E standard pins (matches platformio.ini)
+#define PIN_POT          34    // Potentiometer analog input
+#define PIN_BTN_A        36    // Button A
+#define PIN_BTN_B        39    // Button B
+#define PIN_BTN_C        32    // Button C
+#define PIN_BL           13    // Backlight PWM
+#define PIN_CC1101_CS    15    // CC1101 Chip Select
+#define PIN_CC1101_GDO0  26    // CC1101 GDO0 (interrupt)
+#define PIN_PN532_IRQ     5    // PN532 Interrupt (I2C mode doesn't need CS)
+#define PIN_IR_RX        35    // IR receiver pin
+#define PIN_IR_TX        33    // IR transmitter (LED control) pin
+#define PIN_ONEWIRE       2    // DS18B20 temperature sensor
+
+// SPI1 shared bus (TFT + CC1101 + SD Card)
+// Pins defined in platformio.ini build_flags for TFT:
+// SCLK=18, MOSI=23, MISO=19, TFT_CS=14, TFT_DC=27, TFT_RST=4
+// SD Card: CS on pin 25
+#define PIN_SD_CS        25    // SD card Chip Select
 
 // ── Timing ────────────────────────────────────────────────────────────────
 #define FPS              30

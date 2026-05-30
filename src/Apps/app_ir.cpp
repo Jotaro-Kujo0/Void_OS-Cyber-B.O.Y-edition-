@@ -1,6 +1,6 @@
 #include "app_ir.h"
-#include "ui/draw.h"
-#include "ui/theme.h"
+#include "UI/draw.h"
+#include "UI/theme.h"
 #include "hal/hal_storage.h"
 #include "config.h"
 #include <IRrecv.h>
@@ -82,7 +82,7 @@ void app_ir_tick() {
     if (!_learning) return;
     if (_rx.decode(&_result)) {
         if (_result.decode_type != UNKNOWN &&
-            _result.value != REPEAT_64BIT) {
+            _result.value != 0) {
             IRRecord r;
             r.code     = _result.value;
             r.protocol = (uint16_t)_result.decode_type;

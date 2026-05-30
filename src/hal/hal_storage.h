@@ -2,6 +2,7 @@
 #pragma once
 #include <stdint.h>
 #include <stdbool.h>
+#include <cstddef>
 
 void     hal_storage_init();
 bool     hal_storage_set_u8 (const char *key, uint8_t val);
