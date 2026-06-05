@@ -1,4 +1,4 @@
-////#include <Arduino.h>
+#include <Arduino.h>
 #include "config.h"
 #include "UI/draw.h"
 #include "UI/theme.h"
@@ -18,6 +18,12 @@
 #include "Apps/app_sys.h"
 #include "UI/character/sprite.h"
 #include "hal/hal_buttons_exp.h" // Handles PCF8574
+#include <iostream>
+#include <vector>
+#include <string>
+#include <thread>
+#include <chrono>
+
 
 // ── App registry — one entry per app ─────────────────────────────────────
 static const AppDef APPS[APP_COUNT] = {
@@ -76,6 +82,7 @@ static void input_task() {
     hal_input_tick();
 }
 
+
 // ── Power task — runs every second ───────────────────────────────────────
 static void power_task() {
     hal_power_tick();
@@ -88,13 +95,20 @@ static void boot_splash() {
     draw_textf(SCR_W/2-12, SCR_H/2+8,  T_DIM,T_BG, FONT_SM, "v2.0");
     draw_hline(20, SCR_H/2+24, SCR_W-40, T_BORDER);
 
+    
+
     const char *lines[] = {
+        "initializing system...",
+        "Checking hardware...OK",
+        "Checking storage...OK",
+        "init input........OK",
+        "init buttons.....OK",
         "init display.....OK",
         "init cc1101......OK",
         "init pn532.......OK",
         "init ir..........OK",
         "load storage.....OK",
-        "SYSTEM READY",
+        "SYSTEM READY...GO HACK SOME",
     };
     for (int i=0; i<6; i++) {
         draw_textf(20, SCR_H/2+32+i*14, i==5?T_FG:T_DIM, T_BG,

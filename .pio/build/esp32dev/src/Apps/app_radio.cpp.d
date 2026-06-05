@@ -1,6 +1,4 @@
 .pio/build/esp32dev/src/Apps/app_radio.cpp.o: src/Apps/app_radio.cpp \
- src/Apps/app_radio.h src/Apps/../os/events.h src/Apps/../UI/draw.h \
- src/Apps/../config.h \
  /home/codespace/.platformio/packages/framework-arduinoespressif32/cores/esp32/Arduino.h \
  /home/codespace/.platformio/packages/framework-arduinoespressif32/cores/esp32/esp_arduino_version.h \
  /home/codespace/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/freertos/include/freertos/FreeRTOS.h \
@@ -135,4 +133,5 @@
  /home/codespace/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/esp_hw_support/include/soc/esp32/spiram.h \
  /home/codespace/.platformio/packages/framework-arduinoespressif32/cores/esp32/io_pin_remap.h \
  /home/codespace/.platformio/packages/framework-arduinoespressif32/cores/esp32/Arduino.h \
- src/UI/theme.h
+ src/Apps/../config.h src/Apps/../UI/draw.h src/Apps/app_radio.h \
+ src/Apps/../os/events.h src/UI/theme.h

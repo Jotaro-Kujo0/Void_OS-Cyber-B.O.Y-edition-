@@ -22,3 +22,5 @@
 // Layout
 #define ROW_H       ((SCR_H - STATS_H) / 3)  // 97px per app row
 #define APP_PAD     6
+
+//I want to add a few changable themes later on development

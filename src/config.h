@@ -12,8 +12,8 @@
 #define RIGHT_X         168    // right panel left edge
 
 // ── GPIO ─────────────────────────────────────────────────────────────────
-// BOM: ESP32-WROOM-32E standard pins (matches platformio.ini)
-#define PIN_POT          34    // Potentiometer analog input
+// BOM: ESP32-WROOM-32E standard pins
+#define PIN_POT          34    // Potentiometer input
 #define PIN_BTN_A        36    // Button A
 #define PIN_BTN_B        39    // Button B
 #define PIN_BTN_C        32    // Button C
@@ -25,7 +25,7 @@
 #define PIN_IR_TX        33    // IR transmitter (LED control) pin
 #define PIN_ONEWIRE       2    // DS18B20 temperature sensor
 
-// SPI1 shared bus (TFT + CC1101 + SD Card)
+// SPI1 shared bus (TFT + CC1101)
 // Pins defined in platformio.ini build_flags for TFT:
 // SCLK=18, MOSI=23, MISO=19, TFT_CS=14, TFT_DC=27, TFT_RST=4
 // SD Card: CS on pin 25
@@ -67,7 +67,7 @@
 #define C_RED           0xF800
 #define C_AMBER         0xFC00
 #define C_BLUE          0x001F
-#define TRANSPARENT     0xF81F   // magenta = sprite transparency key
+#define TRANSPARENT     0xF81F   // magenta sprite transparency key           
 
 // ── Sprite frame dimensions ──────────────────────────────────────────────
 #define SPRITE_W         96

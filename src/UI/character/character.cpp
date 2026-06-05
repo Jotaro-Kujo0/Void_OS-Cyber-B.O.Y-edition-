@@ -50,15 +50,15 @@ void character_tick(Character *c) {
 }
 
 void character_draw(Character *c) {
-    // Draw body.jpg at center
+    // Drawss body at center
     // Center of screen is SCR_W/2, SCR_H/2
-    // Body is ~100x160 px, center it
+    // Body is ~100x160 px ish
     int body_x = (SCR_W / 2) - 50;
     int body_y = (SCR_H / 2) - 80;
     draw_jpg(body_x, body_y, "UI/assets/BODY.jpg");
 
-    // Draw head.jpg with position offset
-    // Head is ~60x80 px, positioned above body
+    // Draw head with position offset
+    // Head is ~60x80 px ish, positioned above body
     int head_off_x = (int)(c->cur_x * 20);  // scale offset
     int head_off_y = (int)(c->cur_y * 20);
     int head_x = body_x + 25 + head_off_x;

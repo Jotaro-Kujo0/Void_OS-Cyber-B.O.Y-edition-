@@ -9,7 +9,7 @@ typedef enum : uint8_t {
     TRANS_FADE,
 } TransType;
 
-// Call before drawing the new screen.
+// Calls before drawing the new screen.
 // This captures the current framebuffer and animates out.
 void transition_start(TransType t);
 bool transition_running();

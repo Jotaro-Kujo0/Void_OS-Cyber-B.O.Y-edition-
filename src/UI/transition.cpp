@@ -4,7 +4,7 @@
 #include "config.h"
 #include <Arduino.h>
 
-// Two 480×320×2 byte buffers = 307,200 bytes each → use PSRAM
+// Two 480×320×2 byte buffers = 307,200 bytes each → uses PSRAM
 static uint16_t *_buf_old = nullptr;
 static uint16_t *_buf_new = nullptr;
 static TransType _type    = TRANS_NONE;
@@ -16,7 +16,7 @@ void transition_start(TransType t) {
         _buf_old = (uint16_t*)ps_malloc(SCR_W * SCR_H * 2);
         _buf_new = (uint16_t*)ps_malloc(SCR_W * SCR_H * 2);
     }
-    if (!_buf_old || !_buf_new) return;  // PSRAM unavailable, skip
+    if (!_buf_old || !_buf_new) return;  // if PSRAM unavailable, skip
     // Capture current screen into _buf_old via readRect
     tft.readRect(0, 0, SCR_W, SCR_H, _buf_old);
     _type = t;
@@ -36,7 +36,7 @@ void transition_tick() {
         tft.pushImageDMA(0, 0, SCR_W - offset, SCR_H,
                          _buf_old + offset);
     } else if (_type == TRANS_FADE) {
-        // Simple fill; full fade needs alpha blending — skip for now
+        // Simple fill; full fade needs alpha blending — skips for now
         uint8_t a = (uint8_t)(progress * 255);
         tft.fillScreen(tft.color565(0, a >> 2, 0));
     }

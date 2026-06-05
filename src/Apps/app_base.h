@@ -4,8 +4,6 @@
 #include <stdint.h>
 #include "../os/events.h"
 
-// This is the definition the compiler cannot find.
-// Ensure this structure exists in this file:
 typedef struct {
     const char *name;
     const char *desc;

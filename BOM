@@ -4,7 +4,7 @@ This document serves as the definitive hardware and software repository referenc
 
 ---
 
-## 1. COMPLETE BILL OF MATERIALS (BOM)
+## 1.  BILL OF MATERIALS (BOM)
 
 ### Main Compute & Display
 * **1x** ESP32-WROOM-32E (or ESP32-WROVER-E with 8MB PSRAM) Development Board
@@ -37,76 +37,3 @@ This document serves as the definitive hardware and software repository referenc
 * **1x** MAX17043 I2C Lithium Battery Fuel Gauge Board
 * **1x** MT3608 DC-DC Step-Up Boost Converter Module (Adjusted to supply stable 5V output)
 
----
-
-## 2. COMPLETE CONNECTION MATRIX
-
-### Power Rail Connections
-* **Battery (+)** -> TP4056 `BAT+` -> MAX17043 `VCELL`
-* **Battery (-)** -> TP4056 `BAT-` -> MAX17043 `GND`
-* **TP4056 OUT+** -> MT3608 `VIN+` **AND** ESP32 `5V` / `VIN` pin
-* **TP4056 OUT-** -> MT3608 `VIN-` **AND** ESP32 `GND` (All grounds must connect here to create a common ground plane)
-* **MT3608 VOUT+ (Set to 5V)** -> 5V Power Rails (IR LED Array, Haptic Motor VCC)
-* **ESP32 3V3 Pin** -> 3.3V Power Rails (TFT, SD Card, CC1101, PN532, GPS, PCF8574, Potentiometer)
-
-### Shared SPI Communication Bus
-* **ESP32 GPIO 18 (SCK)** -> TFT `CLK` **AND** SD `SCK` **AND** CC1101 `SCK`
-* **ESP32 GPIO 19 (MISO)** -> TFT `MISO` **AND** SD `MISO` **AND** CC1101 `MISO`
-* **ESP32 GPIO 23 (MOSI)** -> TFT `MOSI` **AND** SD `MOSI` **AND** CC1101 `MOSI`
-
-### Chip Select (CS) & Control Lines
-* **ESP32 GPIO 14** -> TFT `CS` (Chip Select)
-* **ESP32 GPIO 27** -> TFT `DC` / `RS` (Data / Command)
-* **ESP32 GPIO 4** -> TFT `RST` (Reset)
-* **ESP32 GPIO 5** -> Micro SD `CS` (Chip Select)
-* **ESP32 GPIO 15** -> CC1101 `CS` / `CSN` (Chip Select)
-
-### Shared I2C Communication Bus
-* **ESP32 GPIO 21 (SDA)** -> MAX17043 `SDA` **AND** PN532 `SDA` **AND** PCF8574 `SDA`
-* **ESP32 GPIO 22 (SCL)** -> MAX17043 `SCL` **AND** PN532 `SCL` **AND** PCF8574 `SCL`
-
-### Dedicated Module Serial & Peripheral Pins
-* **ESP32 GPIO 16 (RX2)** -> NEO-6M GPS `TX`
-* **ESP32 GPIO 17 (TX2)** -> NEO-6M GPS `RX`
-* **ESP32 GPIO 34 (Analog In)** -> Potentiometer Center Pin (Signal pin)
-    * *Potentiometer Outer Pin 1 -> ESP32 3V3*
-    * *Potentiometer Outer Pin 2 -> ESP32 GND*
-
-### High-Current Transistor Switching Triggers
-* **ESP32 GPIO 12 (PWM)** -> Gate Pin of MOSFET 1 (Haptic Vibration Motor driver)
-    * *MOSFET 1 Source -> Common GND*
-    * *MOSFET 1 Drain -> Haptic Motor Negative (-)*
-    * *Haptic Motor Positive (+) -> 5V Rail*
-    * *1N4007 Diode -> Placed parallel across Haptic Motor (+ and -) with cathode pointing to +*
-    * *10k Ohm Resistor -> Bridged from MOSFET 1 Gate to Common GND*
-* **ESP32 GPIO 13 (Digital Out)** -> Gate Pin of MOSFET 2 (940nm IR LED Array driver)
-    * *MOSFET 2 Source -> Common GND*
-    * *MOSFET 2 Drain -> IR LED Array Negative (-)*
-    * *IR LED Array Positive (+) -> 5V Rail*
-    * *10k Ohm Resistor -> Bridged from MOSFET 2 Gate to Common GND*
-
-### PCF8574 Port Expander Button Configuration
-*(Pins P0 through P6 sit low when pressed/switched. Configure internal pull-ups via software)*
-* **PCF8574 P0** -> Tactile Switch 1 (Select Action) -> Terminal to Ground
-* **PCF8574 P1** -> Tactile Switch 2 (Back Action) -> Terminal to Ground
-* **PCF8574 P2** -> Tactile Switch 3 (Aux Action) -> Terminal to Ground
-* **PCF8574 P3** -> EC11 Rotary Encoder Terminal A -> Ground
-* **PCF8574 P4** -> EC11 Rotary Encoder Terminal B -> Ground
-* **PCF8574 P5** -> EC11 Encoder Integrated Push-Switch -> Ground
-* **PCF8574 P6** -> SPDT Slide Switch (Kill-Switch Active position) -> Ground
-
----
-
-## 3. REQUIRED SOFTWARE LIBRARIES (`platformio.ini`)
-
-Include this dependency array inside your project's `platformio.ini` environment profile:
-
-```ini
-lib_deps =
-    bodmer/TFT_eSPI @ ^2.5.43
-    LSatan/SmartRC-CC1101-Driver-Lib @ ^1.0.9
-    electroniccats/ElectronicCats-PN532 @ ^4.3.0
-    mikalhart/TinyGPSPlus @ ^1.0.3
-    robtillaart/PCF8574 @ ^0.4.1
-    dfrobot/DFRobot_MAX17043 @ ^1.0.0
-    crankyoldgit/IRremoteESP8266 @ ^2.8.6

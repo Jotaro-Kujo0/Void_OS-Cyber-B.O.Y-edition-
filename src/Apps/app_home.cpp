@@ -106,7 +106,7 @@ void app_home_draw() {
         draw_panel_row(RIGHT_X, STATS_H+i*ROW_H, PANEL_W, ROW_H,
                        RA[i], _sel==RA[i], true);
 
-    // Center character
+    // Center OC
     character_draw(&_char);
 
     // Bottom hint

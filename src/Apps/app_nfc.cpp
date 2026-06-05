@@ -9,7 +9,6 @@
 #include <stdio.h>
 
 // PN532 I2C mode: GPIO 21 SDA, 22 SCL, Address 0x24
-// TODO: Integrate with proper PN532 library (see BOM for ElectronicCats-PN532)
 // For now, this is a stub implementation
 
 static bool _hw_ok = false;
@@ -31,7 +30,7 @@ static uint32_t  _frame = 0;
 
 static void nfc_task() {
     if (!_scanning || !_hw_ok) return;
-    // TODO: Implement NFC scanning when library is integrated
+    // TODO: Implement NFC scanning
 }
 
 static void save_nfc(const NfcRecord &r) {

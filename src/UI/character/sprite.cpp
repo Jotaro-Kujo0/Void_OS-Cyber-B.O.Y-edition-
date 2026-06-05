@@ -1,10 +1,10 @@
 //sprite.cpp
 #include "sprite.h"
-#include "../draw.h"     // Contains your verified draw_jpg()
-#include "../../config.h" // Centralized configurations
+#include "../draw.h"     
+#include "../../config.h" 
 #include <TFT_eSPI.h>
 
-extern TFT_eSPI tft; // Access core global display instance
+extern TFT_eSPI tft; // Access to core global display instance
 
 MascotEngine::MascotEngine() : _currentAppIndex(0), _state(STATE_IDLE) {}
 
@@ -66,13 +66,10 @@ void MascotEngine::render() {
     const int16_t SCLERA_RADIUS     = 10;
     const int16_t PUPIL_RADIUS      = 4;
     
-    // Draw Left Eye
+    // Draw Center Eye
     tft.fillCircle(L_EYE_HOME_X, EYES_HOME_Y, SCLERA_RADIUS, EYE_SCLERA_COLOR);
     tft.fillCircle(L_EYE_HOME_X + offsetX, EYES_HOME_Y + offsetY, PUPIL_RADIUS, EYE_PUPIL_COLOR);
-    
-    // Draw Right Eye
-    tft.fillCircle(R_EYE_HOME_X, EYES_HOME_Y, SCLERA_RADIUS, EYE_SCLERA_COLOR);
-    tft.fillCircle(R_EYE_HOME_X + offsetX, EYES_HOME_Y + offsetY, PUPIL_RADIUS, EYE_PUPIL_COLOR);
+
 }
 
 // Instantiate global handle

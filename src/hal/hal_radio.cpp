@@ -9,7 +9,7 @@ static uint8_t _rssi = 0;
 static uint8_t _scan_count = 0;
 
 void hal_radio_init() {
-    // Set SPI pins
+    // SPI pins
     _cc1101.setSpiPin(18, 19, 23, 15);
     _cc1101.setGDO0(26);
     
@@ -20,12 +20,10 @@ void hal_radio_init() {
 }
 
 uint8_t hal_radio_rssi() {
-    // Use getRssi() (Capitalization matches the library)
     return (uint8_t)_cc1101.getRssi();
 }
 
 uint8_t hal_radio_scan() {
-    // CheckRxFifo() returns the number of bytes waiting
     return _cc1101.CheckRxFifo(0);
 }
 
@@ -34,14 +32,13 @@ void hal_radio_send(float freq_mhz, const uint8_t *data, uint8_t len) {
     
     _cc1101.setMHZ(freq_mhz);
     
-    // The library uses SendData()
     _cc1101.SendData((uint8_t*)data, len);
 }
 
 int8_t hal_radio_receive(uint8_t *buf, uint8_t *len) {
     if (!buf || !len) return -1;
     
-    // Check if data is available
+    // Checking if data is available
     if (_cc1101.CheckRxFifo(0) == 0) return -1;
     
     // ReceiveData returns the number of bytes read

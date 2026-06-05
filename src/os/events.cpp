@@ -1,6 +1,5 @@
 #include "events.h"
 
-// Define the variables here, NOT in the header
 #define EVENT_BUF_SIZE 16
 static Event _q[EVENT_BUF_SIZE];
 static uint8_t _h = 0; // head
