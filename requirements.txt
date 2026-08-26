@@ -1,0 +1,2 @@
+# Development/build tooling
+platformio==6.1.19

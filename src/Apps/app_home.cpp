@@ -11,27 +11,43 @@
 
 static Character _char;
 static uint8_t   _sel = 1;
-static uint8_t   _pot_prev = 255;
 
 static const float EYE[APP_COUNT][2] = {
-    { 0.0f, 0.0f},
-    {-0.7f,-0.5f}, {-0.7f, 0.1f}, {-0.5f, 0.6f},
-    { 0.7f,-0.5f}, { 0.7f, 0.1f}, { 0.5f, 0.4f},
-    { 0.0f,-0.7f},
+    { 0.0f,  0.0f},                                 //  0 HOME
+    {-0.7f, -0.65f}, {-0.7f, 0.05f}, {-0.7f, 0.55f}, //  1 STAT,  2 WIFI,  3 LOG
+    {-0.7f, 0.85f}, {-0.7f, -0.30f},                //  8 BUS,   11 SCAN
+    {-0.5f,  0.7f}, {-0.5f, -0.95f},                // 13 SNIFF, 15 WEB (bottom-left well)
+    {-0.3f,  0.95f},                                // 17 HELP  (sliver above bottom-left)
+    { 0.7f, -0.65f}, { 0.7f, 0.05f}, { 0.7f, 0.55f}, //  4 RADIO,  5 NFC,  6 IR
+    { 0.7f,  0.85f}, { 0.7f, -0.30f},               //  9 HID,   12 ROGUE
+    { 0.5f,  0.7f}, { 0.5f, -0.95f},                // 14 FUZZ,  16 BODY (bottom-right well)
+    { 0.3f,  0.95f},                                // 18 DROP  (sliver above bottom-right)
+    {-0.45f,-0.45f},                                //  7 SYS
+    { 0.45f,-0.45f},                                // 10 DARK
+    { 0.0f,  -0.95f},                               // 19 QR   (centre bottom)
 };
 
 static const char* NAMES[APP_COUNT] = {
-    "HOME","STAT","MAP","LOG","RADIO","NFC","IR","SYS"
+    "HOME","STAT","WIFI","LOG","RADIO","NFC","IR","SYS","BUS","HID","DARK",
+    "SCAN","ROGUE","SNIFF","FUZZ","WEB","BODY","HELP","DROP","QR"
 };
 static const char* DESCS[APP_COUNT] = {
-    "","vitals","navigate","logger","sub-ghz","rfid","infrared","system"
+    "","vitals","wifi/ble","logger","sub-ghz","rfid","infrared","system",
+    "cable","badble","stealth",
+    "recon","evilap","urllog","fuzzer","scrape","bodies",
+    "cheat","usb","gen"
 };
 static const float FILLS[APP_COUNT] = {
-    0,0.87f,0.6f,0.45f,0.72f,0.5f,0.3f,1.0f
+    0,0.87f,0.6f,0.45f,0.72f,0.5f,0.3f,1.0f,
+    0.4f,0.55f,0.2f,0.6f,0.7f,0.5f,0.6f,0.5f,
+    0.5f,0.8f,0.4f,0.7f
 };
 static const AnimID ANIMS[APP_COUNT] = {
     ANIM_IDLE, ANIM_HAPPY, ANIM_CURIOUS, ANIM_TIRED,
-    ANIM_FOCUS, ANIM_FOCUS, ANIM_ALERT, ANIM_IDLE
+    ANIM_FOCUS, ANIM_FOCUS, ANIM_ALERT, ANIM_IDLE,
+    ANIM_FOCUS, ANIM_ALERT, ANIM_TIRED, ANIM_CURIOUS,
+    ANIM_ALERT, ANIM_FOCUS, ANIM_TIRED, ANIM_CURIOUS,
+    ANIM_FOCUS, ANIM_HAPPY, ANIM_ALERT, ANIM_CURIOUS
 };
 
 static uint8_t pot_to_app(uint8_t p) {
@@ -92,26 +108,48 @@ void app_home_draw() {
     draw_fill(0, 0, SCR_W, SCR_H, T_BG);
     draw_statsbar();
 
-    // Left panel
-    const uint8_t LA[] = {1,2,3};
-    for (int i=0;i<3;i++)
-        draw_panel_row(0, STATS_H+i*ROW_H, PANEL_W, ROW_H,
-                       LA[i], _sel==LA[i], false);
-    draw_vline(PANEL_W, STATS_H, SCR_H-STATS_H, T_BORDER);
+    // 8 rows so the enlarged catalogue fits in the visible grid (16
+    // tile positions + 2 strip slots). Tile row height drops to 30 px
+    // so the SYS strip and the bottom hint both fit.
+    // Left panel:  STAT(1)  WIFI(2)  LOG(3)  BUS(8)  SCAN(11)  SNIFF(13)  WEB(15)  HELP(17)
+    const uint8_t LA[] = {1, 2, 3, 8, 11, 13, 15, 17};
+    // Right panel: RADIO(4) NFC(5) IR(6)  HID(9)  ROGUE(12) FUZZ(14)  BODY(16)  DROP(18)
+    const uint8_t RA[] = {4, 5, 6, 9, 12, 14, 16, 18};
+    // Strip: SYS(7), DARK(10), and QR(19) share the bottom strip with
+    // the SYS+DARK combo taking the top and QR dropping to the right.
+    const int PANEL_ROWS = 8;
+    const int row_h = 30;
+    for (int i = 0; i < PANEL_ROWS; ++i)
+        draw_panel_row(0, STATS_H + i * row_h, PANEL_W, row_h,
+                       LA[i], _sel == LA[i], false);
+    draw_vline(PANEL_W, STATS_H, SCR_H - STATS_H, T_BORDER);
+    draw_vline(RIGHT_X - 1, STATS_H, SCR_H - STATS_H, T_BORDER);
+    for (int i = 0; i < PANEL_ROWS; ++i)
+        draw_panel_row(RIGHT_X, STATS_H + i * row_h, PANEL_W, row_h,
+                       RA[i], _sel == RA[i], true);
 
-    // Right panel
-    const uint8_t RA[] = {4,5,6};
-    draw_vline(RIGHT_X-1, STATS_H, SCR_H-STATS_H, T_BORDER);
-    for (int i=0;i<3;i++)
-        draw_panel_row(RIGHT_X, STATS_H+i*ROW_H, PANEL_W, ROW_H,
-                       RA[i], _sel==RA[i], true);
+    // SYS row (7) — full-width strip just above the hint.
+    int y = STATS_H + PANEL_ROWS * row_h;
+    draw_fill(0, y, SCR_W, 24, T_SEL_BG);
+    // Highlight row using the focused tile boundary.
+    const bool dark_focused = _sel == APP_DARK;
+    draw_rect(0, y, SCR_W, 24, _sel == 7 ? T_FG : dark_focused ? T_FG : T_BORDER);
+    draw_textf(8, y + 6, _sel == 7 ? T_FG : T_DIM, T_SEL_BG, FONT_SM,
+               "%s %s", _sel == 7 ? ">" : " ",
+               NAMES[APP_SYS]);
+    draw_textf(SCR_W - 100, y + 6, _sel == 7 ? T_FG : T_DIM, T_SEL_BG,
+               FONT_SM, "%s", DESCS[APP_SYS]);
+    // DARK (10) sits on the right side of the SYS strip.
+    draw_textf(SCR_W - 40, y + 6, dark_focused ? T_FG : T_DIM,
+               T_SEL_BG, FONT_SM,
+               dark_focused ? ">DARK" : "DARK");
 
     // Center OC
     character_draw(&_char);
 
     // Bottom hint
-    draw_hline(0, SCR_H-16, SCR_W, T_BORDER);
-    draw_text(CENTER_X, SCR_H-12, "[A] ENTER  [B] ---  [C] SYS",
+    draw_hline(0, SCR_H - 16, SCR_W, T_BORDER);
+    draw_text(CENTER_X, SCR_H - 12, "[A] ENTER  [B] ---  [C] SYS",
               T_DIM, T_BG, FONT_SM);
 }
 

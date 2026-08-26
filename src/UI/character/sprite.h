@@ -1,6 +1,6 @@
 //sprite.h
-#ifndef SPRITE_H
-#define SPRITE_H
+#ifndef SPRITE_ENGINE_H
+#define SPRITE_ENGINE_H
 
 #include <Arduino.h>
 
@@ -42,4 +42,4 @@ public:
 
 extern MascotEngine Mascot;
 
-#endif
+#endif // SPRITE_ENGINE_H

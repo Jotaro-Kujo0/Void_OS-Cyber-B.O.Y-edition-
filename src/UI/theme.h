@@ -1,6 +1,6 @@
 // theme.h
 #pragma once
-#include "config.h"
+#include "../config.h"
 
 // Primary palette
 #define T_BG        C_BLACK

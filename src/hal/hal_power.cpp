@@ -4,14 +4,19 @@
 #include "hal_storage.h"
 #include "config.h"
 #include <Arduino.h>
+
+#ifndef VOIDOS_RPI5
 #include <esp_sleep.h>
+#endif
 
 static uint32_t _last_activity = 0;
 static bool     _dimmed = false;
 
 void hal_power_init() {
     _last_activity = millis();
+#ifndef VOIDOS_RPI5
     esp_sleep_enable_ext0_wakeup((gpio_num_t)PIN_BTN_A, 0);
+#endif
 }
 
 void hal_power_activity() {
@@ -29,10 +34,15 @@ void hal_power_tick() {
         hal_display_bl_set(BL_DIM);
         _dimmed = true;
     }
+#ifndef VOIDOS_RPI5
     if (idle > SLEEP_TIMEOUT_MS) {
         hal_storage_commit();
-        esp_deep_sleep_start();  // wakes on BTN_A LOW
+        esp_deep_sleep_start();
     }
+#else
+    // Raspberry Pi 5 has no microcontroller deep-sleep API. Keep the process
+    // alive so it can wake immediately on input; only the display is dimmed.
+#endif
 }
 
 bool hal_power_is_dimmed() { return _dimmed; }

@@ -1,4 +1,6 @@
-# MASTER BLUEPRINT: ESP32 CYBER-BOY OS PROJECT
+# MASTER BLUEPRINT: VOID-OS CYBER-BOY PROJECT
+
+The software supports two compute profiles: ESP32 firmware and Raspberry Pi 5 native Linux. Use one profile at a time; the Raspberry Pi 5 profile is recommended for the full Linux-portable build.
 
 This document serves as the definitive hardware and software repository reference for the Pip-Boy OS development ecosystem.
 
@@ -7,7 +9,7 @@ This document serves as the definitive hardware and software repository referenc
 ## 1.  BILL OF MATERIALS (BOM)
 
 ### Main Compute & Display
-* **1x** ESP32-WROOM-32E (or ESP32-WROVER-E with 8MB PSRAM) Development Board
+* **1x** Raspberry Pi 5 (2GB or larger) with Raspberry Pi OS, or **1x** ESP32-WROOM-32E for the original firmware profile
 * **1x** 2.8-inch TFT LCD Module with SPI Interface (ILI9341 Driver Chip, 240x320 resolution)
 * **1x** Micro SD Card Slot Breakout Board (SPI compatible)
 
@@ -15,7 +17,7 @@ This document serves as the definitive hardware and software repository referenc
 * **1x** CC1101 Sub-GHz RF Transceiver Module (433MHz/868MHz) with SMA Antenna connector
 * **1x** PN532 NFC / RFID Reader/Writer Module
 * **1x** NEO-6M GPS Module with Ceramic Patch Antenna
-* **1x** 2.4GHz Antenna (For ESP32 internal WiFi/Bluetooth)
+* **1x** 2.4GHz antenna when using the ESP32 profile; Raspberry Pi 5 uses its onboard wireless hardware
 * **1x** Sub-GHz Antenna (Tuned to regional ISM band, 433MHz or 868MHz)
 
 ### Discrete Electronics, Inputs & Haptics

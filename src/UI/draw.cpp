@@ -36,7 +36,8 @@ void draw_textf(int x, int y, uint16_t fg, uint16_t bg,
 
 void draw_bar(int x, int y, int w, int h,
               float v, uint16_t fg, uint16_t bg) {
-    if (v < 0) v = 0; if (v > 1) v = 1;
+    if (v < 0) v = 0;
+    if (v > 1) v = 1;
     tft.fillRect(x, y, w, h, bg);
     int fw = (int)(w * v);
     if (fw > 0) tft.fillRect(x, y, fw, h, fg);
@@ -59,20 +60,26 @@ void draw_sprite(int dx, int dy,
     }
     tft.endWrite();
 }
-// JPG loading using TFT_eSPI TJPG decoder
+// JPG loading.
+//
+// Both targets now route through the unified `media.h` dispatcher
+// (`Media` handle + `media_render`). The dispatcher's Pi 5 path
+// pipes JPG -> ImageMagick -> BMP and recurses through the BMP
+// decoder; ESP32 path uses BitBank's `TJpgDec` (see media.cpp for
+// platformio.deps). This keeps `draw_jpg` as a thin shim used by
+// the existing sprite/character code and the new media API.
 
-#include <TFT_eSPI.h>
+#include "media.h"
 
 bool draw_jpg(int x, int y, const char *filename) {
-    // Simplified: draw colored placeholder rectangle
-    // Placeholder dimensions (approx size for different assets)
-    draw_fill(x, y, 100, 120, 0x4208);  // blue-ish placeholder
-    draw_rect(x, y, 100, 120, T_FG);
-    draw_text(x + 10, y + 50, "JPG", T_FG, 0x4208, FONT_SM);
-    return true;
+    Media *m = media_open(filename);
+    if (!m) return false;
+    bool ok = media_render(m, x, y);
+    media_close(m);
+    return ok;
 }
 
 bool draw_jpg_scaled(int x, int y, int scale, const char *filename) {
-    // Scaled version - just calls draw_jpg for now
+    (void)scale;
     return draw_jpg(x, y, filename);
 }
