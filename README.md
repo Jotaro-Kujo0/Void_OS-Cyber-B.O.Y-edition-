@@ -111,6 +111,9 @@ To run module checks and ensure memory safety:
 
 The OS architecture, UI framework, and application lifecycles are fully implemented in software. Its far from finished but gives the basic idea (hopefully)
 
+##HARDWARE
+I meant VoidOS to be compatiable with most builds but right now its designed specifically for a rasberry pi 5 build, The schematic for this project is listed as Cyber.B.O.Y.kicad_sch. 
+
 ## NOTES
 
 As the OS is in development and is far off from being done, theres a lot of future-planned fuctions that are never used. I will implement them in the future versions. if you run a [pio check] on your terminal you will see al the planned funtions.
@@ -120,3 +123,5 @@ As the OS is in development and is far off from being done, theres a lot of futu
 This is the current ram and flash usage consumed by the OS , I plan on reeducing it but tehres a lot of head-space even now.
 
 You can see more detail inside the code, I left comments that hopfully make people undertsand the architecture.
+
+
