@@ -1,20 +1,20 @@
 # Void-OS - Cyber B.O.Y. Edition
 
 Cyber-B.O.Y is a cyberdeck project inspired by pip-boy from fallout, this repository contains schematics for the hardware and the software for this project.
- 
-Void-OS is a custom wearable cyber-deck interface written in C++. It supports the original ESP32 firmware target and a native Raspberry Pi 5/Linux target with the same UI, scheduler, and application architecture.
+Software is a sub-repo of my VoidOS project.
 
 ---
 
 ## 1. Project Overview
 
-The goal of Void-OS is to provide direct control over a portable hardware stack without a heavy GUI framework. On Raspberry Pi 5, the native target uses Linux SPI (`/dev/spidev0.0`), I2C-1, the GPIO character-device API, POSIX serial GPS parsing, and file-backed settings.
+The goal of Void-OS is to provide direct control over a portable hardware stack without a heavy GUI framework. On Raspberry Pi 5, the native target uses Linux SPI (`/dev/spidev0.0`), I2C-1, the GPIO character-device API, POSIX serial GPS parsing, and file-backed settings. Its meant to be used for testing out the security of devices around 
+and learning about ethical hacking
 
 ---
 
 ## 2. Software Architecture
 
-Void-OS is built on a strict separation of concerns, divided into three main layers:
+Void-OS is built on a strict separated parts, divided into three main layers:
 
 ### The Hardware Abstraction Layer (HAL)
 To ensure the OS can be ported to different board layouts in the future, all physical components are managed through dedicated HAL modules:
@@ -23,19 +23,13 @@ To ensure the OS can be ported to different board layouts in the future, all phy
 * `hal_power` & `hal_battery`: Monitors power draw, battery levels, and screen dimming states.
 * `hal_gps` & `hal_radio`: Interfaces with external communication and location modules.
 
+
 ### The UI Framework
 A custom, lightweight graphics engine handles all screen drawing. It bypasses standard heavy GUI libraries in favor of optimized, direct-to-buffer rendering functions (`draw_rect`, `draw_text`, `draw_sprite`) to ensure high framerates on the 2.8-inch display.
 
-### The Modular App System
-Applications are siloed from the core OS logic. Current system modules include:
-* `app_home`: Core launcher and status dashboard.
-* `app_sys`: System settings and memory monitoring.
-* `app_radio`: Radio frequency scanning and control.
-* `app_nfc`: Near Field Communication read/write interface.
-* `app_ir`: Infrared transmission and receiving.
-* `app_stat`: Real-time hardware telemetry.
+###  App System
+Applications are siloed from the core OS logic. They are bare-bone at the moment but I'll expand them with new releases
 
----
 
 ## 3. Application Lifecycle
 
@@ -55,17 +49,17 @@ The software is specifically engineered for the following hardware stack.
 
 | Component | Specification / Details | Status |
 | :--- | :--- | :--- |
-| **Compute** | ESP32 DevKit or Raspberry Pi 5 | Supported |
-| **Display** | 2.8-inch ILI9341 SPI TFT, 240x320 | Supported |
-| **Input** | PCF8574 buttons over I2C; optional external IIO ADC for pot | Supported on Pi 5 |
-| **Storage** | ESP32 NVS or Raspberry Pi XDG state files | Supported |
-| **Power Supply** | 3.7V Li-ion battery & charge controller | Hardware-dependent |
+| **Compute** | Raspberry Pi 5 | First iteration is strict for these, will provide new microcontrollers in the future|
+| **Display** | 2.8-inch ILI9341 SPI TFT, 240x320/ 3.5" ressisve touch | Supported |
+| **Input** | PCF8574 buttons over I2C; optional external IIO ADC for pot | Supported on Pi 5 | Can be used with any other standart switch
+| **Storage** | Raspberry Pi XDG state files | Supported | Storage needs an SD card strictly tho
+| **Power Supply** | 3.7V Li-ion battery & charge controller | Hardware-dependent | Will be working on a more reliable version
 
 ---
 
 ## 5. Build and Installation
 
-Void-OS is managed via PlatformIO. 
+Void-OS is managed via PlatformIO. Can use CMakeLists for testing. 
 
 ### Prerequisites
 * VS Code with the PlatformIO extension installed.
@@ -73,17 +67,14 @@ Void-OS is managed via PlatformIO.
 * Python 3.10+ and a virtual environment.
 
 ### Compilation
-1. Clone the repository.
+1. Clone this repository.
 2. Create the local build environment:
    `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`
 3. Install the declared PlatformIO platforms, frameworks, and libraries:
    `.venv/bin/pio pkg install -e esp32dev`
    `.venv/bin/pio pkg install -e raspberrypi5`
-4. Build the ESP32 firmware:
-   `.venv/bin/pio run -e esp32dev`
 5. Build the Raspberry Pi 5 native executable:
    `.venv/bin/pio run -e raspberrypi5`
-   or compile directly with `g++ -std=c++17 -DVOIDOS_RPI5=1 -Isrc/rpi5 -Isrc -Isrc/UI -Isrc/Apps -Isrc/os -Isrc/hal $(find src -name '*.cpp') -o void-os`.
 
 ### Raspberry Pi 5 wiring
 
@@ -106,47 +97,26 @@ For the same live view in a browser (no ANSI terminal needed):
 
 `python3 tools/web_harness.py`
 
-It auto-builds the native binary (via PlatformIO if present, else the CMake build) and serves `http://127.0.0.1:8000/`. The page is a desktop: 12 soft-corner square app icons on each side (spaced out), a big gear-headed character in the centre (8-tooth gear head drawn procedurally on the canvas, half-circle body, eye that follows your cursor), and click-to-open draggable, wide windows. Windows are rendered in the browser with HTML/CSS/JS — the HELP app ships a full cheatsheet, the other apps show live-or-dummy device stats — so they work even with no device frames. Clicking an icon also sends the firmware a `launch <NAME>` REPL command so the device stays in sync. Close a window with the ✕ or Esc. The serial log lives in a taskbar drawer, and the keyboard still drives the device directly (`.`, `,`, arrows and `0-9` nudge/set the pot, `a/A b/B c/C` press/release, `q` quits). Device stats and logs stream over a WebSocket by default; if the browser or network blocks WebSockets the page automatically falls back to plain-HTTP polling (`/poll`, `/cmd`), so the desktop works anywhere the page loads. Options: `--port N`, `--every N` (thin the firmware's PPM writes), `--fps N` (1–60, default 15 — caps the encode+broadcast rate), `--build`, `--binary PATH`. It reuses the same `VOIDOS_HARNESS`/`VOIDOS_DUMP_*` hooks as the PC harness, so no firmware changes are needed.
+It auto-builds the native binary (via PlatformIO if present, else the CMake build) and serves `http://127.0.0.1:8000/`. The page is a desktop: 12 soft-corner square app icons on each side (spaced out), my big gear-headed character in the centre  (his name is LV. and is the mascot for my project), and click-to-open draggable, wide windows. Windows are rendered in the browser with HTML/CSS/JS — the HELP app ships a full cheatsheet, the other apps show dummy device stats. Clicking an icon also sends the firmware a `launch <NAME>` REPL command so the device stays in sync. Close a window with the ✕ or Esc. The serial log lives in a taskbar drawer, and the keyboard still drives the device directly (`.`, `,`, arrows and `0-9` nudge/set the pot, `a/A b/B c/C` press/release, `q` quits, 0*9 may not work on first version). Device stats and logs stream over a WebSocket by default; if the browser or network blocks WebSockets the page automatically falls back to plain-HTTP polling (`/poll`, `/cmd`), so the desktop works anywhere the page loads. Options: `--port N`, `--every N` (thin the firmware's PPM writes), `--fps N` (1–60, default 15 — caps the encode+broadcast rate), `--build`, `--binary PATH`. It reuses the same `VOIDOS_HARNESS`/`VOIDOS_DUMP_*` hooks as the PC harness, so no firmware changes are needed.
+
+
 
 ### Static Analysis
 To run module checks and ensure memory safety:
 `.venv/bin/pio check -e raspberrypi5`
 
-The ESP32 build reports flash/RAM usage automatically. For the native target, use `size .pio/build/raspberrypi5/program` and inspect `/proc/<pid>/status` while it is running.
-
 ---
 
 ## 6. Current Development Status
 
-The OS architecture, UI framework, and application lifecycles are fully implemented in software. I am currently applying for a grant to acquire the physical components listed in the BOM. 
-
-**Immediate Next Steps Upon Hardware Acquisition:**
-* Validate ILI9341 SPI timing and backlight wiring on the Pi 5 hardware.
-* Add a Linux CC1101 driver if sub-GHz radio support is required.
-* Configure `/dev/lirc0` for IR receive/transmit support.
-* Mount the system into the 3D-printed chassis and conduct thermal testing.
+The OS architecture, UI framework, and application lifecycles are fully implemented in software. Its far from finished but gives the basic idea (hopefully)
 
 ## NOTES
 
-As the OS is in development and is far off from being done, theres a lot of future-planned funtions that are never used. I will implement them in the future versions. if you run a [pio check] on your terminal you will see al the planned funtions.
+As the OS is in development and is far off from being done, theres a lot of future-planned fuctions that are never used. I will implement them in the future versions. if you run a [pio check] on your terminal you will see al the planned funtions.
 
 ![alt text](<src/UI/assets/Pio Check.png>)
 
 This is the current ram and flash usage consumed by the OS , I plan on reeducing it but tehres a lot of head-space even now.
 
-## Deploy cleanup
-
-Generated / dev artifacts that are **not** needed when finishing or deploying this project. Most are gitignored already and safe to delete anytime:
-
-| Path | What it is | Action |
-|---|---|---|
-| `.webharness-*/` | web-harness runtime dirs (PPM frames + REPL fifo, one per `web_harness.py` run) | delete — regenerated on every run, now gitignored |
-| `repomix-output.xml` | 37 MB repo dump from `repomix` | deleted (regenerable with `npx repomix`) |
-| `.cache/` | clangd index cache | deleted (regenerable) |
-| `src/UI/assets/GEAR.png` | old PNG gear head — superseded by the procedural 8-tooth gear in `tools/harness_page.html` | deleted (unused) |
-| `build/` · `.pio/` | CMake / PlatformIO build trees | safe to delete; rebuilt via `cmake --build build` or `pio run` |
-| `compile_commands.json` | clangd build metadata | safe to delete; regenerated by CMake |
-
-Dev-only files you can leave out of a deploy tarball but may want locally: `tools/harness_page.html`, `tools/web_harness.py`, `tools/pc_harness.py`, `tools/harness_selftest.py`, `tools/test_hal_*.cpp`, `.vscode/`, `.agents/`, `skills-lock.json`, and the ESP32 Wokwi sim files `wokwi.toml` + `diagram.json` (unused on the Pi 5 build).
-
-Also: `package-lock.json` is an empty npm lockfile with no `package.json` in the tree — safe to remove unless you plan to add node tooling.
+You can see more detail inside the code, I left comments that hopfully make people undertsand the architecture.
