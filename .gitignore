@@ -21,8 +21,6 @@ __pycache__/
 # ── Codebase dump / misc generated artifacts ───────────────────────────
 /repomix-output.xml
 /skills-lock.json
-/package.json
-/package-lock.json
 
 # ── Web harness runtime + editor caches ────────────────────────────────
 /.webharness-*/

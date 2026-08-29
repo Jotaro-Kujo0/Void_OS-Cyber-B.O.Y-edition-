@@ -1,0 +1,9 @@
+{
+  "name": "void-os-webui",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static webui for Void-OS — browser harness page (dummy device screens, no backend needed)",
+  "scripts": {
+    "build": "mkdir -p dist && cp tools/harness_page.html dist/index.html"
+  }
+}
