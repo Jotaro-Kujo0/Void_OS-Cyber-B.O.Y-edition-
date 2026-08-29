@@ -4,6 +4,7 @@
 #include "os/scheduler.h"
 #include "hal/hal_battery.h"
 #include "hal/hal_metrics.h"
+#include "hal/hal_usb_msc.h"
 #include "config.h"
 #include <stdio.h>
 
@@ -71,9 +72,7 @@ void app_stat_draw() {
     draw_gauge_row(y+48,"HRT",  _heart,        _heart*200,"bpm",0xFD20);
     draw_gauge_row(y+72,"SIG",  _signal,       _signal*100,"%", T_ACCENT);
 
-    // System usage block — CPU/MEM/SD/network/load/uptime. Rendered in
-    // a compact column instead of the single-line CPU bar that used to
-    // live here. Operators read these more often than per-sensor values.
+    // System usage column — read more than per-sensor values.
     draw_hline(8, 196, SCR_W-16, T_BORDER);
     int sy = 204;
     draw_textf(8, sy, m.cpu_pct > 85 ? T_ERR : (m.cpu_pct > 60 ? T_WARN : T_FG),
@@ -90,6 +89,17 @@ void app_stat_draw() {
     draw_textf(8, sy, T_DIM, T_BG, FONT_SM,
                "up %u:%02u:%02u  load %u.%02u", m.uptime_s/3600, (m.uptime_s/60)%60, m.uptime_s%60,
                m.load_avg_1m_x100/100, m.load_avg_1m_x100%100);
+    sy += 14;
+    {
+        UsbMscStats usb = hal_usb_msc_stats();
+        uint16_t uc = usb.active ? T_FG : T_DIM;
+        if (usb.active)
+            draw_textf(8, sy, uc, T_BG, FONT_SM, "USB ON %u file%s  %u kB free",
+                       usb.files_count, usb.files_count == 1 ? "" : "s",
+                       (unsigned)usb.free_kb);
+        else
+            draw_textf(8, sy, uc, T_BG, FONT_SM, "USB OFF");
+    }
 
     WatchdogState wd = hal_metrics_watchdog_snapshot();
     if (!wd.ok) {

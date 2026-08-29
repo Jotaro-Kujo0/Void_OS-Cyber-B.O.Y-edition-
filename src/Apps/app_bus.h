@@ -1,13 +1,5 @@
 //app_bus.h - hardware sniffer (slot APP_BUS)
-//
-// sub modes:
-// logic - 4-channel logic analyzer
-// wıegand - access-control D0/D1 sniffer
-// ibutton - DS1990A reader/emulator 1 wire
-// console- direct cable passthrough UART
-// remote - TCp remote console (ssh-style type shi)
-// GPIO - read/write any GPIO pin
-// DTMF - DTMF / POCSAG / FSK tone decoder
+// logic / wıegand / ibutton / console / remote / GPIO / DTMF
 
 #pragma once
 #include "../os/events.h"

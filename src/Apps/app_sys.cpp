@@ -1,34 +1,6 @@
-// app_sys.cpp — system settings + dark-mode integration
-//
-// ───────────────────────────────────────────────────────────────────────────
-//  STEALTH INTEGRATION
-// ───────────────────────────────────────────────────────────────────────────
-//
-//  app_sys renders the live stealth state on its main panel:
-//
-//    * DARK MODE  — mirrors the value of hal_wifi_is_stealth() so the
-//                   operator can confirm at a glance that app_dark
-//                   successfully applied the toggle.
-//    * LED OFF    — true if the green ACT LED is forced off via the
-//                   sysfs trigger. (See app_dark for the actual
-//                   implementation.)
-//    * HAPTIC ONLY— true if hal_haptic is the only alert path; beep
-//                   tones are disabled.
-//    * RF KILL    — true if the CC1101 MOSFET has been switched off
-//                   (hal_mosfet_get(MOSFET_RF) == MOSFET_OFF).
-//    * BT ROLLOVR — seconds since the last BLE Resolvable Private
-//                   Address rotation.
-//
-//  app_sys DOES NOT toggle any of these settings itself; the toggles
-//  live in app_dark so that all stealth state changes are routed
-//  through one app. app_sys is purely a read-only indicator plus the
-//  factory-reset + brightness controls it already had.
-//
-//  The factory reset clears every storage key under the "voidos.dark"
-//  namespace in addition to the existing NVS keys, so a stealth
-//  configuration cannot survive a reset.
-//
-// ───────────────────────────────────────────────────────────────────────────
+// app_sys.cpp — system info, brightness, factory reset.
+// Stealth toggles live in app_dark (single choke point); app_sys is
+// read-only + brightness/reset. Reset also wipes "voidos.dark" keys.
 
 #include "app_sys.h"
 #include "UI/draw.h"
@@ -55,7 +27,11 @@ static uint8_t _bl = BL_FULL;
 void app_sys_init() { _bl = hal_storage_get_u8(NVS_BL_KEY, BL_FULL); }
 void app_sys_event(Event e) {
     if (e.type == EVT_POT_CHANGED) { _bl=40+static_cast<uint8_t>((e.data/255.0f)*215); hal_display_bl_set(_bl); hal_storage_set_u8(NVS_BL_KEY,_bl); }
-    if (e.type == EVT_BTN_C_DOWN) { for(int i=0;i<5;i++){char k[8];snprintf(k,8,"cap%d",i);hal_storage_set_str(k,"");} for(int i=0;i<8;i++){char k[8];snprintf(k,8,"nfc%d",i);hal_storage_set_str(k,"");} for(int i=0;i<8;i++){char k[8];snprintf(k,8,"ir%d",i);hal_storage_set_str(k,"");} }
+    if (e.type == EVT_BTN_C_DOWN) { // factory reset storage keys
+        for(int i=0;i<5;i++){char k[8];snprintf(k,8,"cap%d",i);hal_storage_set_str(k,"");}
+        for(int i=0;i<8;i++){char k[8];snprintf(k,8,"nfc%d",i);hal_storage_set_str(k,"");}
+        for(int i=0;i<8;i++){char k[8];snprintf(k,8,"ir%d",i);hal_storage_set_str(k,"");}
+    }
 }
 void app_sys_tick() {}
 

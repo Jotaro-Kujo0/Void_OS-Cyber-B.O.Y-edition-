@@ -1,7 +1,4 @@
-// app_qr.cpp — QR-code generator (Raspberry Pi 5)
-//
-// Uses qrcodegen (nayuki/QR-Code-generator) for real QR encoding.
-// Pipeline: text → QR matrix → scale → framebuffer → TFT + BMP save.
+// app_qr.cpp — QR via qrcodegen (nayuki). matrix->TFT + BMP save.
 
 #include "app_qr.h"
 

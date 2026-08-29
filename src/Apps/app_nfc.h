@@ -1,15 +1,5 @@
-// app_nfc.h — NFC & RFID auditing via PN532 (slot APP_NFC)
-//
-// Sub-modes:
-//   0. READ   — read UID + NDEF records from ISO14443 tags
-//   1. EMUL   — emulate a saved UID to test reader auth
-//   2. KEYS   — MIFARE Classic key dictionary attack
-//   3. DICT   — open wordlist for key audit
-//   4. HIST   — last-read tag history
-//   5. WRITE  — write NDEF / MIFARE payload to a tag
-//   6. ISO14  — ISO 14443-A crypto1 nested/darkside attack
-//
-// Legal posture: KEYS + EMUL require hold-A for 3 s ("AUDIT" banner).
+// app_nfc.h — NFC/RFID audit via PN532.
+// Modes: READ, EMUL, KEYS, DICT, HIST, WRITE, ISO14.
 
 #pragma once
 #include "../os/events.h"

@@ -1,13 +1,5 @@
-// app_bus.cpp — bus / hardware sniffer + cable console + remote console.
-//
-// Sub-modes:
-//   0. LOGIC     — 4-channel logic analyzer (stub)
-//   1. WIEGAND   — access-control D0/D1 sniffer
-//   2. iBUTTON   — DS1990A reader/emulator on 1-Wire
-//   3. CONSOLE   — pass-through cable console (UART / /dev/ttyUSB0)
-//   4. REMOTE    — TCP remote console
-//   5. GPIO      — read/write any GPIO pin
-//   6. DTMF      — DTMF / POCSAG / FSK tone decoder (stub)
+// app_bus.cpp — bus/hardware sniffer + cable/remote console.
+// LOGIC / WIEGAND / iBUTTON / CONSOLE / REMOTE / GPIO / DTMF
 
 #include <Arduino.h>
 #include "app_bus.h"

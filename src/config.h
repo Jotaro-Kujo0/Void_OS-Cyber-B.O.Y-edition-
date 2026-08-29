@@ -11,27 +11,8 @@
 #define CENTER_W         96
 #define RIGHT_X          168
 
-// ── GPIO ─────────────────────────────────────────────────────────────────
-// ── GPIO expansion: extended feature pinout ───────────────────────────
-//
-//  The following pins are reserved by the extended feature set (sub-GHz
-//  auditing, NFC auditing, Wi-Fi/BLE, IR array, HID, bus sniffing, stealth
-//  hardware). They are intentionally picked outside the SPI/I2C/UART pins
-//  already used so that the existing buses are not re-mapped when these new
-//  features are enabled.
-//
-//  Raspberry Pi 5 free BCM pins (after the SPI / I2C / TFT pins above):
-//      5, 8, 9, 10, 11, 13, 14, 15, 17, 19, 20, 21, 26, 27
-//  ESP32 free pins (not in boot-strapping mode):
-//      14, 16, 17, 25 (and a few others; see hal_pins.h notes)
-//
-//  Each pin belongs to one of two MOSFET-controlled loads:
-//    * PIN_HAPTIC  – coin vibration motor through IRLZ44N #1
-//    * PIN_IR_ARRAY – 5V 940nm IR LED array through IRLZ44N #2
-//  and to one of three direct GPIO loads:
-//    * PIN_RF_KILL      – hardware RF kill (cuts CC1101 VCC)
-//    * PIN_WIEGAND_D0/D1 – physical access-control reader D0/D1 data lines
-//    * PIN_LOGIC_*      – 4-channel software logic analyzer inputs
+// ── GPIO ──── extended feature pinout ──────────────────────────────────
+// Pins chosen outside existing SPI/I2C/UART so buses keep their mapping.
 #ifdef VOIDOS_RPI5
 // Raspberry Pi 5 uses BCM GPIO numbers. SPI0 CE0 is controlled by spidev.
 #define PIN_POT          0     // external ADC IIO channel 0; Pi GPIO has no ADC
@@ -125,14 +106,18 @@
 #define APP_HELP        17   // cheatsheet + per-app man
 #define APP_DROP        18   // USB drop attack generator
 #define APP_QR          19   // QR-code generator
-#define APP_COUNT       20
+#define APP_LEAK        20   // leak scanner (secret/hash/breach)
+#define APP_MARAUD      21   // marauder: beacon/deauth/probe
+#define APP_OSINT       22   // OSINT: whois/dns/subdomain/geo/dorked
+#define APP_HARDEN      23   // device self-hardening dashboard
+#define APP_COUNT       24
 
-// ── Persistent storage keys ──────────────────────────────────────────────
+// ── Storage keys ────────────────────────────────────────────────────────
 #define NVS_NS          "cyberdeck"
 #define NVS_BL_KEY      "bl_bright"
 #define NVS_LAST_APP    "last_app"
 
-// ── Colors (RGB565) ──────────────────────────────────────────────────────
+// ── Colors (RGB565) ──
 #define C_BLACK         0x0000
 #define C_WHITE         0xFFFF
 #define C_PGREEN        0x27E4
@@ -144,13 +129,7 @@
 #define C_BLUE          0x001F
 #define TRANSPARENT     0xF81F
 
-// ── Extended feature limits ───────────────────────────────────────────────
-//
-//  These limits exist to bound heap usage on the 4 GB Pi 5 target. Anything
-//  that grows at runtime (capture buffers, tag history, GPX/CSV logs) is
-//  capped by a *_MAX symbol here. Adjust upward only after measuring free
-//  RAM with `cat /proc/<pid>/status | grep -i vmrss` while the feature is
-//  active.
+// Memory caps to keep the Pi 5 heap tight. Bump after measuring.
 #define RADIO_CAPTURE_BYTES   4096   // max raw CC1101 RX capture buffer
 #define IR_CAPTURE_PULSES     1024   // max IR pulse-width samples
 #define NFC_TAG_LOG           32    // max NDEF/UID log entries kept in RAM

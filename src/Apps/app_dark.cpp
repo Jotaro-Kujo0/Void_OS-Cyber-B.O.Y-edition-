@@ -1,7 +1,5 @@
-// app_dark.cpp — Stealth / dark-mode settings hub (Raspberry Pi 5)
-//
-// Manages: WiFi stealth, BLE/RF isolation, network anonymity,
-// physical stealth (LED/backlight/haptic), and per-op MAC rotation.
+// app_dark.cpp — stealth/dark-mode hub.
+// WiFi/BLE/RF/NET/physical + per-op MAC rotation.
 
 #include "app_dark.h"
 #include "../UI/draw.h"

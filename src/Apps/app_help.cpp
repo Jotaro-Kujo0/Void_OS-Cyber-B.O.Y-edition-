@@ -1,5 +1,6 @@
-//app_help.cpp - small cheatsheet
-//just some text yk
+
+//app_help.cpp - small cheatsheet, just text yk
+
 
 #include "app_help.h"
 #include "../UI/draw.h"
@@ -35,6 +36,10 @@ static const HelpLine HELP[] = {
     { APP_FUZZ,  "FUZZ",  "N HTTP GETs, status+latency -> loot/fuzz.csv" },
     { APP_WEB,   "WEB",   "GET URL, peek HTML for title/h1/links" },
     { APP_BODY,  "BODY",  "passive WiFi probe ring + OUI vendor" },
+    { APP_LEAK,   "LEAK",   "secret/hash/breach scanner -> loot/leaks.csv" },
+    { APP_MARAUD, "MARAUD", "Wi-Fi beacon spam/deauth/probe sheet (Pi5)" },
+    { APP_OSINT,  "OSINT",  "whois/dns/subdom/geo/dork OSINT gatherer" },
+    { APP_HARDEN, "HARDEN", "device self-hardening (ufw/fail2ban/lynis)" },
     { APP_HELP,  "HELP",  "you are here" },
 };
 
@@ -85,7 +90,7 @@ void app_help_draw() {
     int body_y = STATS_H + 8 + N_ROWS * row_h + 4;
 
     if (_row == 0) {
-        // THIS APP — show the last-active app's description
+        // THIS APP — last active app's blurb
         const HelpLine *h = find_help(_last_app);
         if (!h)
             draw_textf(8, body_y, T_WARN, T_BG, FONT_SM, "no desc");
@@ -104,7 +109,7 @@ void app_help_draw() {
         }
 
     } else if (_row == 2) {
-        // HAL KEYS — operator-editable storage keys
+        // HAL KEYS — editable storage keys
         draw_text(8, body_y, "editable hal_storage keys:", T_FG, T_BG, FONT_SM);
         int yy = body_y + 14;
 

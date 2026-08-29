@@ -1,36 +1,7 @@
-// media.h — unified image / animation renderer.
-//
-// ─────────────────────────────────────────────────────────────────────────
-//  PURPOSE
-// ─────────────────────────────────────────────────────────────────────────
-//
-//  Apps fetch a single opaque `Media*` from any file path, then call
-//  `media_render` once per frame to blit. The same `Media*` covers BMP,
-//  PNG, JPG, GIF (animated), and a frame-sequence "video" mode where the
-//  caller supplies a printf-style path template.
-//
-//  Decoders are registered in `media.cpp`. New formats grow by adding
-//  one branch to the dispatcher, not by editing any app.
-//
-//  Paths are filesystem paths. On Pi 5 they go to the local FS; on
-//  ESP32 they go through the SD library (`/assets/...` is the SD
-//  mount root). The dispatcher reads the path and routes by extension,
-//  not by directory.
-//
-// ─────────────────────────────────────────────────────────────────────────
-//  MEMORY MODEL
-// ─────────────────────────────────────────────────────────────────────────
-//
-//  ponytail: the renderer piggybacks on TFT_eSPI's `pushImage` + a
-//  single scanline buffer (one row of RGB565 or RGBA8). No full
-//  framebuffer for static images either — TJpgDec / PNGdec stream
-//  row-by-row. Animated GIF keeps N scanline + palette state (~12 KB
-//  total, regardless of image resolution).
-//
-//  Frame-sequence video: no decoder state, just an fopen per frame.
-//  For 30 fps from SD on ESP32's SPI bus that's ~600 kB/s read — fine.
-//
-// ─────────────────────────────────────────────────────────────────────────
+// media.h — unified image/animation renderer.
+// Opaque Media* handle: open, blit each frame, close.
+// Handles BMP/PNG/JPG/GIF + frame-sequence "video" by path template.
+// Streams scanline-by-scanline; only GIF keeps small palette state.
 
 #pragma once
 #include <stdint.h>

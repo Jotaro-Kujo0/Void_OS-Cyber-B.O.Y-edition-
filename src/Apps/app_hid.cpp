@@ -1,13 +1,5 @@
-// app_hid.cpp — HID keystroke emulation (Raspberry Pi 5)
-//
-// Sub-modes:
-//   0. BLE (BadBLE)    — BLE HID keyboard via btmgmt system() calls
-//   1. USB (HID)       — USB HID keyboard via configfs libcomposite
-//   2. BLE (PERIPH)    — pair as keyboard to a target device
-//   3. APPLE (SPOOF)   — AirPods/Continuity beacon spam via hcitool cmd
-//
-// Dependencies:
-//   - bluez (btmgmt, hcitool — no -dev headers needed)
+// app_hid.cpp — HID keystroke emulation (BLE/USB/Apple spoof).
+// Needs bluez (btmgmt/hcitool), configfs libcomposite.
 //   - dtoverlay=dwc2 (USB HID gadget)
 
 #include "app_hid.h"

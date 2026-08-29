@@ -1,13 +1,5 @@
-// app_ir.cpp — Infrared control & testing (Raspberry Pi 5 via LIRC)
-//
-// Three sub-modes:
-//   MODE_LIB   — play saved codes from hal_storage
-//   MODE_TVBG  — TV-B-Gone power cycle from /mnt/void-os/ir/tvbg_power_codes.bin
-//   MODE_LEARN — capture IR signal, render waveform, save to text file
-//
-// Requires in /boot/firmware/config.txt:
-//   dtoverlay=gpio-ir,gpio_pin=23
-//   dtoverlay=gpio-ir-tx,gpio_pin=22
+// app_ir.cpp — IR via LIRC. Modes: LIB / TVBG / LEARN.
+// Needs dtoverlay=gpio-ir(+tx) pins 23/22 in config.txt.
 
 #include "app_ir.h"
 #include "../UI/draw.h"
@@ -190,10 +182,6 @@ static void draw_waveform() {
         x += dx;
     }
 }
-
-// ═══════════════════════════════════════════════════════════════════════
-//  API
-// ═══════════════════════════════════════════════════════════════════════
 
 void app_ir_init() {
     _mode = MODE_LIB;

@@ -1,13 +1,5 @@
-// app_drop.h — USB drop-attack artefact generator (slot APP_DROP)
-//
-// Sub-modes:
-//   0. TARGET  — select OS template (WIN/LIN/MAC/HID/GENERIC)
-//   1. PAYLOAD — choose or edit the payload script/binary
-//   2. BUILD   — generate artefact files from template + payload
-//   3. DROP    — activate USB-MSC gadget to expose loot to target
-//
-// Requires: configfs USB gadget support in /boot/firmware/config.txt
-//           dtoverlay=dwc2
+// app_drop.h — USB drop-artefact generator. TARGET/PAYLOAD/BUILD/DROP.
+// Needs configfs USB gadget, dtoverlay=dwc2.
 
 #pragma once
 #include "../os/events.h"

@@ -1,18 +1,4 @@
-// app_scan.cpp — small passive recon.
-//
-// State machine per row:
-//
-//   IDLE → ARMED → RUNNING → IDLE.
-//   RUNNING sweeps the work so the screen keeps painting each frame.
-//   ARP walks /proc/net/arp (Pi 5) or the soft-AP station list (ESP32).
-//   TCP scans 24 high-yield ports 1–2 per frame so the user can still
-//   navigate away the moment they're done.
-//
-// Sub-modes:
-//   0. ARP HOSTS
-//   1. TCP  PORTS
-//   2. SERVICES  (port → name hint, scroll with POT)
-//   3. WIFI HOSTS  (soft-AP station list)
+// app_scan.cpp — passive recon. IDLE→ARMED→RUNNING, sweep per frame.
 
 #include "app_scan.h"
 #include "../UI/draw.h"
@@ -179,7 +165,7 @@ void app_scan_tick() {
     if (_phase != 2) return;
     if (_row == 0) { do_arp(); _phase = 3; }
     else if (_row == 1) {
-        // Two probes per frame max so the UI stays responsive.
+        // Two probes/frame keeps UI responsive.
         for (int k = 0; k < 2 && _run_i < N_PORTS && _port_n < SCAN_PORT_LOG_MAX; ++k) {
             if (do_tcp_one(_run_i++)) break;
         }

@@ -60,15 +60,7 @@ void draw_sprite(int dx, int dy,
     }
     tft.endWrite();
 }
-// JPG loading.
-//
-// Both targets now route through the unified `media.h` dispatcher
-// (`Media` handle + `media_render`). The dispatcher's Pi 5 path
-// pipes JPG -> ImageMagick -> BMP and recurses through the BMP
-// decoder; ESP32 path uses BitBank's `TJpgDec` (see media.cpp for
-// platformio.deps). This keeps `draw_jpg` as a thin shim used by
-// the existing sprite/character code and the new media API.
-
+// JPG shim over the media dispatcher.
 #include "media.h"
 
 bool draw_jpg(int x, int y, const char *filename) {

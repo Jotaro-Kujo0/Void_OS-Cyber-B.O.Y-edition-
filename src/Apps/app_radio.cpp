@@ -1,39 +1,7 @@
-// app_radio.cpp — sub-GHz RF security research (CC1101)
-//
-// ───────────────────────────────────────────────────────────────────────────
-//  SUB-MODE ROADMAP (what each menu row must do once the real CC1101
-//  driver + GDO0 polling are wired into hal_radio_*.h)
-// ───────────────────────────────────────────────────────────────────────────
-//
-//  1. CAPT  (capture & replay)
-//       hal_radio_capture_start() → RX ring → hal_radio_capture_step() →
-//       hal_radio_capture_replay() once on EVT_BTN_C. Stream to PCAP on
-//       EVT_BTN_C held 3 s via app_log.
-//
-//  2. SWEEP (spectrum analyzer)
-//       hal_radio_sweep_start() → hop band in 100 kHz bins, 50 ms dwell,
-//       plot RSS bars per bin. CSV every minute via app_log.
-//
-//  3. PROTO (modulation analysis)
-//       Pick OOK/ASK/FSK/GFSK/MSK + data rate from a sub-menu, then
-//       run capture + bit-framing decoder. Failed-frame counter helps
-//       A/B profile selection.
-//
-//  4. FIXED (fixed-code generator)
-//       12-bit trinary or 24-bit binary DIP switch configs. Cycle at
-//       50 ms dwell. Aborted on EVT_BTN_B. Cycle is ~10 days for
-//       24-bit binary at 50 ms — designed for overnight runs.
-//
-//  5. POCSAG (pager decoder)
-//       Manchester decode on GDO0, BCH(31,21) error correction, sync
-//       codeword 0x7CD215D8. Each msg is appended as one CSV row.
-//
-//  HARDWARE LEGAL POSTURE:
-//       hal_radio_send() defaults to a no-op until the operator enters
-//       "TX ARMED" (EVT_BTN_A held 3 s). Stealth mode blocks all TX.
-//       Region selection (315/433/868/915) is enforced by hal_radio_set_band.
-//
-// ───────────────────────────────────────────────────────────────────────────
+// app_radio.cpp — sub-GHz RF audit (CC1101).
+// Modes: CAPT/SWEEP/PROTO/FIXED/POCSAG/TX. TX stays a no-op until
+// the operator pills "TX ARMED"; stealth blocks all TX; region via
+// hal_radio_set_band.
 
 #include <Arduino.h>
 #include "../config.h"
@@ -57,7 +25,7 @@ static bool     _armed = false;
 static char     _status[24] = "READY";
 static uint16_t _packet_count = 0;
 static int8_t   _last_rssi = -120;
-static char     _pocsag_lines[4][40];      // decoded pager messages
+static char     _pocsag_lines[4][96];      // decoded pager messages
 static uint8_t  _pocsag_n = 0;
 
 void app_radio_init() {
@@ -77,12 +45,13 @@ void app_radio_tick() {
     if (_row == 4) {                          // POCSAG: collect messages
         RadioPocsagMsg m;
         while (hal_radio_pocsag_pop(&m)) {
-            char line[40];
+            char line[96];
             std::snprintf(line, sizeof(line), "%lu:%s",
                           (unsigned long)m.address, m.text);
             for (int i = 3; i > 0; --i)
-                std::snprintf(_pocsag_lines[i], 40, "%s", _pocsag_lines[i - 1]);
-            std::snprintf(_pocsag_lines[0], 40, "%s", line);
+                std::snprintf(_pocsag_lines[i], sizeof(_pocsag_lines[0]),
+                              "%s", _pocsag_lines[i - 1]);
+            std::snprintf(_pocsag_lines[0], sizeof(_pocsag_lines[0]), "%s", line);
             if (_pocsag_n < 4) ++_pocsag_n;
         }
     }
@@ -141,8 +110,7 @@ void app_radio_event(Event e) {
     if (_row == 1) hal_radio_sweep_start();
     if (_row == 3) hal_radio_fixed_start(24, 50);
     if (_row == 4) hal_radio_pocsag_start();
-    // Row 5 (TX raw) is handled by app_radio_tick: each frame sends
-    // the next chunk of the queued pulse list via hal_radio_send_raw_bits().
+    // TX raw (row 5) streams queued pulses per frame in app_radio_tick.
     snprintf(_status, sizeof(_status), "%s", names[_row]);
 }
 

@@ -22,6 +22,11 @@ __pycache__/
 /repomix-output.xml
 /skills-lock.json
 /package.json
+/package-lock.json
+
+# ── Web harness runtime + editor caches ────────────────────────────────
+/.webharness-*/
+/.cache/
 
 # ── Editor / IDE ───────────────────────────────────────────────────────
 .vscode/.browse.c_cpp.db*

@@ -1,13 +1,5 @@
-// app_dark.h — Stealth / dark-mode settings hub (slot APP_DARK)
-//
-// Sub-modes:
-//   0. WIFI (MAC/MODE)  — MAC randomization, passive mode, hostname
-//   1. BLE (RPA/PASS)   — RPA rotation, passive scan, RF MOSFET kill
-//   2. NET (DNS/TTL)    — DoH/DoT, TTL spoofing, static IP
-//   3. PHYS (LED/BL/HA) — backlight off, LED suppress, haptic only
-//   4. OPS (PER-OP)     — periodic MAC re-roll + ARP flush (60s)
-//
-// A flips all toggles at once. OPS registers a scheduled task on init.
+// app_dark.h — stealth/dark-mode hub.
+// WIFI/BLE/NET/PHYS/OPS toggles; A flips all, OPS schedules re-roll.
 
 #pragma once
 #include "../os/events.h"

@@ -1,16 +1,10 @@
-// app_drop.cpp — USB drop-attack artefact generator (Raspberry Pi 5)
-//
-// Generates autorun artefacts for Windows/Linux/macOS targets and
-// exposes them via USB Mass Storage Gadget (configfs/libcomposite).
-//
-// Requires in /boot/firmware/config.txt:
-//   dtoverlay=dwc2
-//   dr_mode=otg
-//
-// The gadget is created at /sys/kernel/config/usb_gadget/g0/ and
-// the loot files are served from a backing file (fat.img).
+// app_drop.cpp — USB drop-artefact generator via configfs/libcomposite.
+// Needs dtoverlay=dwc2 + dr_mode=otg; gadget lifecycle via hal_usb_msc.
+// path that exposes the loot root as a USB drive.
 
 #include "app_drop.h"
+#include "../hal/hal_usb_msc.h"
+#include "../hal/hal_loot.h"
 #include "../UI/draw.h"
 #include "../UI/theme.h"
 #include "../hal/hal_storage.h"
@@ -25,19 +19,15 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-#include <sys/mount.h>
-#include <dirent.h>
 #include <errno.h>
 #endif
 
 #ifdef VOIDOS_RPI5
 
-//consts
-#define LOOT_DIR        "/mnt/void-os/loot"
-#define GADGET_BASE     "/sys/kernel/config/usb_gadget/g0"
-#define GADGET_MOUNT    "/mnt/void-os/gadget"
-#define FAT_IMG_PATH    "/mnt/void-os/fat.img"
-#define FAT_IMG_SIZE    (4 * 1024 * 1024)   // 4 MB backing image
+//consts — build artifacts into a subdir of the loot root; hal_usb_msc
+// snapshots the whole root (captured loot + these artifacts) onto the
+// USB drive without clobbering existing captures.
+#define LOOT_DIR        VOIDOS_LOOT_ROOT "/drop"
 
 #define TARGET_NAME_LEN 24
 #define PAYLOAD_PATH_LEN 128
@@ -302,106 +292,9 @@ static bool do_build() {
     return true;
 }
 
-//USB gadget (configs / libcomp)
-static void sysfs_write(const char *path, const char *val) {
-    int fd = open(path,  O_WRONLY);
-    if (fd < 0) return;
-    write(fd, val, std::strlen(val));
-    close(fd);
-}
-
-static bool gadget_enable() {
-    if (_gadget_on) return true;
-
-    // 1. Create backing fat image if missing
-    struct stat st;
-    if (stat(FAT_IMG_PATH, &st) != 0) {
-        char cmd[256];
-        std::snprintf(cmd, sizeof(cmd),
-            "dd if=/dev/zero of=%s bs=1M count=4 2>/dev/null && "
-            "mkfs.vfat -F 32 %s 2>/dev/null",
-            FAT_IMG_PATH, FAT_IMG_PATH);
-        system(cmd);
-    }
-
-    // 2. Create gadget skeleton via configfs
-    ensure_dir(GADGET_BASE);
-    sysfs_write("/sys/kernel/config/usb_gadget/UDC",
-                "");  // unbind first
-
-    sysfs_write(GADGET_BASE "/idVendor",  "0x1d6b");  // Linux Foundation
-    sysfs_write(GADGET_BASE "/idProduct", "0x0104");
-    sysfs_write(GADGET_BASE "/bcdUSB",    "0x0200");
-    sysfs_write(GADGET_BASE "/bMaxPacketSize0", "64");
-
-    // Strings
-    ensure_dir(GADGET_BASE "/strings/0x409");
-    sysfs_write(GADGET_BASE "/strings/0x409/manufacturer", "Void-OS");
-    sysfs_write(GADGET_BASE "/strings/0x409/product",      "USB Drop Device");
-    sysfs_write(GADGET_BASE "/strings/0x409/serialnumber",  "42");
-
-    // Mass Storage function
-    ensure_dir(GADGET_BASE "/functions/mass_storage.usb0");
-    sysfs_write(GADGET_BASE "/functions/mass_storage.usb0/lun/file",
-                FAT_IMG_PATH);
-    sysfs_write(GADGET_BASE "/functions/mass_storage.usb0/lun/ro", "0");
-
-    // Configuration
-    ensure_dir(GADGET_BASE "/configs/c.1/strings/0x409");
-    sysfs_write(GADGET_BASE "/configs/c.1/strings/0x409/configuration",
-                "Mass Storage");
-    ensure_dir(GADGET_BASE "/configs/c.1/mass_storage.usb0");
-    // Symlink created automatically or via ln -s
-    char link_cmd[256];
-    std::snprintf(link_cmd, sizeof(link_cmd),
-        "ln -sf %s/functions/mass_storage.usb0 "
-        "%s/configs/c.1/mass_storage.usb0",
-        GADGET_BASE, GADGET_BASE);
-    system(link_cmd);
-
-    // 3. Copy loot files into the fat image
-    ensure_dir(GADGET_MOUNT);
-    std::snprintf(link_cmd, sizeof(link_cmd),
-        "mount -o loop,offset=0 %s %s 2>/dev/null", FAT_IMG_PATH, GADGET_MOUNT);
-    if (system(link_cmd) == 0) {
-        // Copy everything from LOOT_DIR into the mount
-        std::snprintf(link_cmd, sizeof(link_cmd),
-            "cp -a %s/* %s/ 2>/dev/null", LOOT_DIR, GADGET_MOUNT);
-        system(link_cmd);
-        system("sync");
-        umount(GADGET_MOUNT);
-    }
-
-    // 4. Bind the UDC to activate the gadget
-    // Find the first available UDC
-    FILE *fp = popen("ls /sys/class/udc/ | head -1", "r");
-    char udc[64] = "";
-    if (fp) {
-        fgets(udc, sizeof(udc), fp);
-        // Strip trailing newline
-        size_t len = std::strlen(udc);
-        if (len > 0 && udc[len-1] == '\n') udc[len-1] = 0;
-        pclose(fp);
-    }
-    if (udc[0]) {
-        sysfs_write(GADGET_BASE "/UDC", udc);
-    } else {
-        std::snprintf(_status, sizeof(_status), "NO UDC FOUND");
-        return false;
-    }
-
-    _gadget_on = true;
-    std::snprintf(_status, sizeof(_status), "USB: ACTIVE");
-    return true;
-}
-
-static void gadget_disable() {
-    if (!_gadget_on) return;
-    sysfs_write(GADGET_BASE "/UDC", "");
-    _gadget_on = false;
-    std::snprintf(_status, sizeof(_status), "USB: OFF");
-}
-
+// Gadget manipulation is delegated to hal_usb_msc. Build writes into the
+// loot root; the HAL snapshots that root into its backing FAT image on
+// hal_usb_msc_start().
 //lifecycle 
 void app_drop_init() {
     _row = 0;
@@ -416,10 +309,13 @@ void app_drop_tick() {
 }
 
 void app_drop_suspend() {
-    gadget_disable();
+    hal_usb_msc_stop();
+    _gadget_on = false;
     save_config();
     _built = false;
 }
+
+bool app_drop_gadget_active() { return _gadget_on; }
 
 //event handle
 void app_drop_event(Event e) {
@@ -476,12 +372,16 @@ void app_drop_event(Event e) {
 
             case 3:  // DROP — toggle USB gadget on/off
                 if (_gadget_on) {
-                    gadget_disable();
+                    hal_usb_msc_stop();
+                    _gadget_on = false;
+                    std::snprintf(_status, sizeof(_status), "USB: OFF");
                 } else {
                     if (!_built) {
                         if (!do_build()) break;
                     }
-                    gadget_enable();
+                    _gadget_on = hal_usb_msc_start();
+                    std::snprintf(_status, sizeof(_status),
+                                  _gadget_on ? "USB: ACTIVE" : "NO UDC FOUND");
                 }
                 break;
         }
@@ -490,7 +390,8 @@ void app_drop_event(Event e) {
 
     if (e.type == EVT_BTN_C_DOWN) {
         // C = emergency disconnect gadget
-        gadget_disable();
+        hal_usb_msc_stop();
+        _gadget_on = false;
         std::snprintf(_status, sizeof(_status), "EJECT: OK");
         return;
     }
@@ -577,6 +478,7 @@ void app_drop_init() {
 }
 void app_drop_tick() {}
 void app_drop_suspend() {}
+bool app_drop_gadget_active() { return false; }
 void app_drop_event(Event e) { (void)e; }
 void app_drop_draw() {
     draw_fill(0, 0, SCR_W, SCR_H, T_BG);

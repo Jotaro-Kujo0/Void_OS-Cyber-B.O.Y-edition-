@@ -1,13 +1,4 @@
-// app_web.cpp — small HTTP web scraper.
-//
-// Sub-modes:
-//   0. URL   — pick / edit the saved URL via hal_storage.
-//   1. GET   — fetch and save HTML.
-//   2. PARSE — extract <title>, <h1>, count <a>, count <form>.
-//   3. LINKS — first 8 anchor links from the last saved HTML.
-//
-// Background pump drives the GET flow; once a fetch starts, the pump
-// keeps reading bytes into a streaming buffer until the response ends,
+// app_web.cpp — small web scraper. URL/GET/PARSE/LINKS; background pump.
 // then closes.
 //
 // Pi 5 path: shell-out to `curl` (Pi OS default) — simplest.

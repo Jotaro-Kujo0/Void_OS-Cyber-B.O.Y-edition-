@@ -1,7 +1,4 @@
-// app_body.cpp — passive Wi-Fi body / probe capture (Raspberry Pi 5)
-//
-// Pipeline: forks `tcpdump -l -e` -> pipe -> line parser -> ring buffer.
-// Parses MAC addresses and SSIDs from 802.11 Probe Requests.
+// app_body.cpp — passive probe capture. tcpdump pipe -> ring buffer.
 
 #include "app_body.h"
 #include "../UI/draw.h"
@@ -22,32 +19,22 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <time.h>
+#include "../hal/hal_probe.h"
 #endif
 
 #ifdef VOIDOS_RPI5
 
-//Time Helper
-static uint32_t sys_millis() {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (uint32_t)(ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
-}
-
-// Entry + Ring
+// Shared probe ring now lives in hal_probe; app_body adds the OUI vendor
+// lookup on top. BodyEntry is a thin read-only view over ProbeDevice.
 struct BodyEntry {
-    uint8_t  mac[6];
+    const uint8_t  *mac;
     uint32_t count;
-    uint32_t first_ms;
-    uint32_t last_ms;
     char     ssid[33];
 };
 
-#define BODY_RING_MAX 64
-static BodyEntry _ring[BODY_RING_MAX];
-static uint16_t  _ring_n = 0;
-static int8_t    _pump_id = -1;
 static bool      _sniff = false;
 static char      _status[24] = "READY";
+static int8_t    _pump_id = -1;
 
 //OUI Vendor Table 
 //wallahi Im cooked
@@ -89,154 +76,48 @@ static const char *vendor_for(const uint8_t *mac) {
     return "?";
 }
 
-//Ring Buff
-
-static int16_t ring_lookup(const uint8_t *mac) {
-    for (uint16_t i = 0; i < _ring_n; ++i) {
-        if (memcmp(_ring[i].mac, mac, 6) == 0) return (int16_t)i;
-    }
-    if (_ring_n >= BODY_RING_MAX) return -1;
-    return (int16_t)(_ring_n++);
-}
+// Ring Buff — delegated to shared hal_probe. This app registers as the
+// sink so hal_probe still routes every decoded probe through
+// app_body_add_packet (kept as the public ingest API for app_home).
 
 void app_body_add_packet(const uint8_t *mac, const char *ssid) {
-    if (!mac) return;
-    int16_t idx = ring_lookup(mac);
-    if (idx < 0) return;
-    BodyEntry *e = &_ring[idx];
-    if (e->count == 0) {
-        memcpy(e->mac, mac, 6);
-        e->first_ms = e->last_ms = sys_millis();
-        snprintf(e->ssid, sizeof(e->ssid), "%s", ssid ? ssid : "");
-    } else {
-        if (ssid && ssid[0] && !e->ssid[0])
-            snprintf(e->ssid, sizeof(e->ssid), "%s", ssid);
-    }
-    ++e->count;
-    e->last_ms = sys_millis();
+    // hal_probe already ingested into its ring; this hook is preserved so
+    // the OUI table / cross-app API stays stable. No-op on ESP32 stub.
+    (void)mac; (void)ssid;
 }
 
-//tcpdump Pipe Pi 5
-
-static pid_t  _tcpdump_pid = -1;
-static int    _pipe_fd = -1;
-static char   _line_buf[512];
-static int    _line_pos = 0;
-
-static void sniff_on() {
-    if (_tcpdump_pid > 0) return;
-
-    int pipefd[2];
-    if (pipe(pipefd) < 0) {
-        snprintf(_status, sizeof(_status), "PIPE ERR");
-        return;
-    }
-
-    _tcpdump_pid = fork();
-    if (_tcpdump_pid == 0) {
-        // Child: redirect stdout to pipe, exec tcpdump
-        close(pipefd[0]);
-        dup2(pipefd[1], STDOUT_FILENO);
-        close(pipefd[1]);
-
-        const char *args[] = {
-            "tcpdump", "-l", "-e", "-i", "wlan0mon",
-            "-s", "256", "type", "mgt", "subtype", "probe-req",
-            NULL
-        };
-        execvp("/usr/bin/tcpdump", const_cast<char**>(args));
-        _exit(1);
-    }
-
-    // Parent: close write end, set read end non-blocking
-    close(pipefd[1]);
-    _pipe_fd = pipefd[0];
-    fcntl(_pipe_fd, F_SETFL, O_NONBLOCK);
-
-    _sniff = true;
-    snprintf(_status, sizeof(_status), "SNIFF ON");
-}
-
-static void sniff_off() {
-    if (_tcpdump_pid > 0) {
-        kill(_tcpdump_pid, SIGTERM);
-        waitpid(_tcpdump_pid, NULL, 0);
-        _tcpdump_pid = -1;
-    }
-    if (_pipe_fd >= 0) {
-        close(_pipe_fd);
-        _pipe_fd = -1;
-    }
-    _sniff = false;
-    _line_pos = 0;
-    snprintf(_status, sizeof(_status), "SNIFF OFF");
-}
-
-// Parse one tcpdump line: extract SA (source MAC) and SSID
-static void parse_probe_line(const char *line) {
-    // tcpdump -e format example:
-    //   ... 0x... ...SA aa:bb:cc:dd:ee:ff ... SSID "MyNetwork" ...
-    // We look for "SA " followed by MAC, and "SSID" followed by name in quotes
-
-    const char *sa = strstr(line, "SA ");
-    if (!sa) return;
-    sa += 3;
-
-    uint8_t mac[6];
-    unsigned int m[6];
-    if (sscanf(sa, "%02x:%02x:%02x:%02x:%02x:%02x",
-               &m[0], &m[1], &m[2], &m[3], &m[4], &m[5]) != 6) return;
-    for (int i = 0; i < 6; ++i) mac[i] = (uint8_t)m[i];
-
-    // Extract SSID (in quotes after "SSID" or "(")
-    char ssid[33] = "";
-    const char *ssid_ptr = strstr(line, "(\"");
-    if (ssid_ptr) {
-        ssid_ptr += 2;
-        int i = 0;
-        while (ssid_ptr[i] && ssid_ptr[i] != '"' && i < 32) {
-            ssid[i] = ssid_ptr[i];
-            ++i;
-        }
-        ssid[i] = '\0';
-    }
-
+static void probe_sink_cb(const uint8_t *mac, const char *ssid) {
     app_body_add_packet(mac, ssid);
 }
 
+static void sniff_on() {
+    if (hal_probe_running()) { _sniff = true; return; }
+    if (hal_probe_capture_start()) {
+        _sniff = true;
+        snprintf(_status, sizeof(_status), "SNIFF ON");
+    } else {
+        snprintf(_status, sizeof(_status), "no tcpdump/mon0");
+    }
+}
+
+static void sniff_off() {
+    hal_probe_capture_stop();
+    _sniff = false;
+    snprintf(_status, sizeof(_status), "SNIFF OFF");
+}
+
 static void pipe_pump() {
-    if (!_sniff || _pipe_fd < 0) return;
-
-    char buf[256];
-    ssize_t n = read(_pipe_fd, buf, sizeof(buf) - 1);
-    if (n <= 0) return;
-    buf[n] = '\0';
-
-    for (ssize_t i = 0; i < n; ++i) {
-        if (buf[i] == '\n' || _line_pos >= (int)sizeof(_line_buf) - 1) {
-            _line_buf[_line_pos] = '\0';
-            if (_line_pos > 10) parse_probe_line(_line_buf);
-            _line_pos = 0;
-        } else {
-            _line_buf[_line_pos++] = buf[i];
-        }
-    }
-
-    // Check if tcpdump died
-    int status;
-    pid_t r = waitpid(_tcpdump_pid, &status, WNOHANG);
-    if (r == _tcpdump_pid) {
-        _tcpdump_pid = -1;
-        _sniff = false;
+    hal_probe_tick();
+    if (_sniff && !hal_probe_running())
         snprintf(_status, sizeof(_status), "tcpdump died");
-    }
 }
 
 // Lifecycle 
 
 void app_body_init() {
-    memset(_ring, 0, sizeof(_ring));
-    _ring_n = 0;
+    hal_probe_init();
+    hal_probe_register_sink(probe_sink_cb);
+    hal_probe_clear();
     if (_pump_id < 0) _pump_id = sched_add("body_pump", pipe_pump, 200, 6);
 }
 
@@ -244,6 +125,8 @@ void app_body_tick() { /* pump task does work */ }
 
 void app_body_suspend() {
     sniff_off();
+    hal_probe_register_sink(nullptr);
+    hal_probe_init();
 }
 
 //Event Handle
@@ -259,7 +142,7 @@ void app_body_event(Event e) {
         return;
     }
     if (e.type == EVT_BTN_C_DOWN) {
-        _ring_n = 0;
+        hal_probe_clear();
         snprintf(_status, sizeof(_status), "ring wiped");
         return;
     }
@@ -267,7 +150,7 @@ void app_body_event(Event e) {
 
 // Public Accessor
 
-uint16_t app_body_visible_count() { return _ring_n; }
+uint16_t app_body_visible_count() { return hal_probe_visible_count(); }
 
 //Draw
 
@@ -289,17 +172,21 @@ void app_body_draw() {
     draw_textf(SCR_W - 60, 8, _sniff ? T_WARN : T_DIM, T_PANEL, FONT_SM,
                "ON:%d", _sniff);
 
-    // Sort by count descending
-    RowCursor rows[BODY_RING_MAX] = {};
+    // Build the sort rows from the shared hal_probe ring.
+    RowCursor rows[PROBE_RING_MAX] = {};
     uint16_t n = 0;
-    for (uint16_t i = 0; i < _ring_n; ++i)
-        rows[n++] = { i, _ring[i].count };
+    uint16_t rn = hal_probe_visible_count();
+    for (uint16_t i = 0; i < rn && i < PROBE_RING_MAX; ++i) {
+        const ProbeDevice *d = hal_probe_at(i);
+        if (d) rows[n++] = { i, d->count };
+    }
     qsort(rows, n, sizeof(RowCursor), rowcmp_count_desc);
 
     int y = STATS_H + 6;
     uint16_t shown = n > 12 ? 12 : n;
     for (uint16_t i = 0; i < shown; ++i) {
-        BodyEntry *e = &_ring[rows[i].i];
+        const ProbeDevice *e = hal_probe_at(rows[i].i);
+        if (!e) continue;
         char macs[20];
         snprintf(macs, sizeof(macs), "%02x:%02x:%02x:%02x:%02x:%02x",
                  e->mac[0], e->mac[1], e->mac[2],
@@ -317,7 +204,7 @@ void app_body_draw() {
                m.cpu_pct, m.mem_pct, m.net_rx_total_kb);
 
     draw_textf(8, SCR_H - 28, T_DIM, T_BG, FONT_SM,
-               "%s  ring:%u/%u", _status, _ring_n, BODY_RING_MAX);
+               "%s  ring:%u/%u", _status, rn, PROBE_RING_MAX);
     draw_hline(0, SCR_H - 16, SCR_W, T_BORDER);
     draw_text(8, SCR_H - 12, "[A] ARM  [B] BACK  C=clear",
               T_DIM, T_BG, FONT_SM);

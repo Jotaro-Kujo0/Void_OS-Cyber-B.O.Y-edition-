@@ -15,6 +15,14 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+// Loot root directory (single source of truth). The USB Mass Storage
+// gadget (hal_usb_msc) and the DROP app both expose this as a USB drive.
+#ifdef VOIDOS_RPI5
+#define VOIDOS_LOOT_ROOT  "/var/lib/void-os/loot"
+#else
+#define VOIDOS_LOOT_ROOT  "/loot"
+#endif
+
 void     hal_loot_init();
 bool     hal_loot_available();
 void     hal_loot_flush();
@@ -36,3 +44,10 @@ typedef struct {
     uint32_t fs_pct;
 } LootStats;
 LootStats hal_loot_stats();
+
+// Pure computation: turn captured raw figures into a LootStats. `fs_total`
+// / `fs_free` are the filesystem blocks×frsize bytes for the volume; the
+// used percentage is derived and clamped to 0..100. Target-agnostic so it
+// can be unit-tested with captured du/find + statvfs output.
+LootStats hal_loot_stats_from(uint32_t files_count, uint32_t bytes_written,
+                              uint64_t fs_total, uint64_t fs_free);

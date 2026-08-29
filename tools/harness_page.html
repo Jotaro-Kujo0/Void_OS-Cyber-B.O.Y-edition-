@@ -1,0 +1,1613 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Void-OS · cyberdeck harness</title>
+<style>
+  /* ═══════════════════════════════════════════════════════════════════
+     VOID CYBERDECK — palette
+     near-black chassis, phosphor green, amber warn, magenta accent
+     ═══════════════════════════════════════════════════════════════════ */
+  :root {
+    --bg:      #07090e;
+    --bg2:     #0b0f16;
+    --panel:   #10161f;
+    --panel2:  #0a0e15;
+    --border:  #232e40;
+    --border2: #37455d;
+    --fg:      #c9d6e3;
+    --dim:     #5d6b7d;
+    --acc:     #41e6a6;   /* phosphor green */
+    --acc-dim: #1e7a52;
+    --amber:   #ffb454;
+    --mag:     #ff5cc8;
+    --blue:    #6cc3ff;
+    --danger:  #ff5f6e;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin:0; overflow:hidden; background:var(--bg); color:var(--fg);
+         font:13px/1.5 ui-monospace, "JetBrains Mono", "Cascadia Code",
+              Menlo, Consolas, "DejaVu Sans Mono", monospace;
+         display:flex; flex-direction:column; }
+
+  /* ── CRT overlay: scanlines + vignette ─────────────────────────── */
+  .crt { position:fixed; inset:0; z-index:900; pointer-events:none;
+         background:
+           repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 1px,
+                                             transparent 1px 3px),
+           repeating-linear-gradient(0deg, rgba(255,255,255,.04) 0 1px,
+                                             transparent 1px 7px),
+           radial-gradient(120% 90% at 50% 40%, transparent 55%,
+                           rgba(0,0,0,.42) 100%); }
+
+  /* ── CRT boot sequence (plays once on load, skippable) ────────── */
+  .boot { position:fixed; inset:0; z-index:850; display:flex;
+          flex-direction:column; align-items:center; justify-content:center;
+          background:#04060a; padding:5vmin;
+          animation:bootflicker .5s steps(12) 1; }
+  @keyframes bootflicker {
+    0% { opacity:.12; } 10% { opacity:.9; } 20% { opacity:.35; }
+    35% { opacity:1; } 55% { opacity:.55; } 70% { opacity:1; } 100% { opacity:1; }
+  }
+  .boot.fade { opacity:0; transition:opacity .45s ease; }
+  .boot pre { margin:0; font-size:clamp(10px,1.55vmin,14.5px); line-height:1.6;
+              color:var(--acc); text-shadow:0 0 8px rgba(65,230,166,.5);
+              max-width:100%; overflow:hidden; }
+  .boot .b-line { white-space:pre; }
+  .boot .b-head { color:#7dffce; letter-spacing:1.5px; }
+  .boot .b-dot { color:var(--dim); }
+  .boot .b-ok   { color:var(--acc); }
+  .boot .b-warn { color:var(--amber); }
+  .boot .b-blink { animation:blink .9s steps(1) infinite; }
+  .boot .b-bar-track { width:min(460px, 62vw); height:16px; margin-top:28px;
+                       border:1px solid var(--border2); background:var(--panel2); }
+  .boot .b-bar { height:100%; width:0%;
+                 background:repeating-linear-gradient(90deg,
+                   var(--acc) 0 7px, rgba(65,230,166,.2) 7px 9px); }
+  .boot .b-status { margin-top:10px; font-size:11px; letter-spacing:2.4px;
+                    color:var(--dim); }
+
+  /* ── top bar: figlet banner + tagline + ticker + sys box ───────── */
+  .topbar { position:relative; flex:0 0 auto; z-index:60;
+            background:linear-gradient(180deg, #0d1219, #0a0e15);
+            border-bottom:1px solid var(--border);
+            box-shadow:0 6px 24px rgba(0,0,0,.55);
+            display:flex; align-items:flex-start; gap:18px; padding:10px 18px 8px; }
+  .banner { margin:0; font-size:clamp(7px,1.45vmin,12.5px); line-height:1.12;
+            color:var(--acc); }
+  @supports ((background-clip: text) or (-webkit-background-clip: text)) {
+    .banner { background:linear-gradient(180deg, #7dffce 0%, var(--acc) 55%, #12a56a 100%);
+              -webkit-background-clip:text; background-clip:text; color:transparent;
+              filter:drop-shadow(0 0 14px rgba(65,230,166,.22)); }
+  }
+  .tagline { margin-top:4px; font-size:10px; letter-spacing:2.2px; color:var(--dim); }
+  .tagline .sp { color:var(--border2); }
+  .ticker { margin-top:5px; font-size:11px; color:var(--fg); white-space:nowrap;
+            overflow:hidden; text-overflow:ellipsis; max-width:60vw; }
+  .ticker .tk-prompt { color:var(--acc); }
+  .ticker .caret { color:var(--acc); animation:blink 1.1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity:0; } }
+
+  .sysbox { margin-left:auto; flex:0 0 auto; align-self:center;
+            border:1px solid var(--border); border-radius:6px;
+            background:var(--panel2); padding:7px 12px; font-size:10.5px;
+            letter-spacing:1.2px; box-shadow:inset 0 0 0 1px rgba(0,0,0,.4); }
+  .sysbox .sb-row { display:flex; justify-content:space-between; gap:22px;
+                    padding:1.5px 0; }
+  .sysbox .sb-k { color:var(--dim); }
+  .sysbox .sb-v { color:var(--fg); text-align:right; }
+  .sysbox .sb-v.ok  { color:var(--acc); }
+  .sysbox .sb-v.bad { color:var(--danger); }
+
+  /* ── desktop stage ─────────────────────────────────────────────── */
+  .desktop { position:relative; flex:1 1 auto; min-height:0;
+             overflow:hidden; background:var(--bg); }
+
+  /* ── app icon tiles (left 12 / right 12, character centred) ────── */
+  .icons { position:absolute; top:50%; transform:translateY(-50%);
+           display:grid; grid-template-columns:repeat(2, minmax(52px, 84px));
+           gap:clamp(10px, 2vh, 24px); justify-items:center; }
+  .icon { width:min(100%, 84px, 10vh); }
+  .icons-left  { left:clamp(12px, 2.6vw, 42px); }
+  .icons-right { right:clamp(12px, 2.6vw, 42px); }
+  .icon { position:relative; aspect-ratio:1/1; margin:0;
+          padding:0; border-radius:4px; cursor:pointer; user-select:none;
+          -webkit-user-select:none; color:var(--fg); font-family:inherit;
+          background:linear-gradient(165deg, #151c27 0%, #0c1119 100%);
+          border:1px solid var(--border);
+          box-shadow:0 0 0 1px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
+          display:flex; flex-direction:column; align-items:center;
+          justify-content:center; gap:2px;
+          transition:transform .08s ease, border-color .08s ease,
+                     box-shadow .08s ease; }
+  .icon .idx { position:absolute; top:4px; left:6px; font-size:8px;
+               letter-spacing:1px; color:var(--dim); transition:color .08s ease; }
+  .icon .glyph { font-size:clamp(19px, 3.2vmin, 26px); line-height:1.25;
+                 color:var(--fg); text-shadow:0 0 10px rgba(0,0,0,.6); }
+  .icon .name { font-size:10px; letter-spacing:1.6px; }
+  .icon .desc { font-size:8px; letter-spacing:.8px; color:var(--dim); }
+  .icon:hover { transform:translateY(-3px); border-color:var(--acc-dim);
+                box-shadow:0 0 0 1px rgba(65,230,166,.25),
+                           0 10px 26px rgba(0,0,0,.6),
+                           inset 0 0 18px rgba(65,230,166,.07); }
+  .icon:hover .idx { color:var(--acc); }
+  .icon:hover .glyph { color:var(--acc);
+                       text-shadow:0 0 12px rgba(65,230,166,.8); }
+  .icon:active { transform:scale(.94); }
+
+  /* ── the character: 8-tooth gear head + eye + dome body ──────────── */
+  #char { position:absolute; left:50%; top:50%;
+          transform:translate(-50%,-50%); pointer-events:none; z-index:1;
+          width:min(58vmin, 560px); height:auto; }
+
+  /* ── draggable app windows ─────────────────────────────────────── */
+  #windows { position:absolute; inset:0; pointer-events:none; }
+  .win { position:absolute; pointer-events:auto; z-index:10;
+         width:500px; height:380px;
+         background:var(--panel);
+         border:1px solid var(--border);
+         box-shadow:0 20px 60px rgba(0,0,0,.7);
+         display:flex; flex-direction:column; overflow:hidden; }
+  .win.focus { border-color:var(--border2);
+               box-shadow:0 20px 66px rgba(0,0,0,.75),
+                          0 0 0 1px rgba(65,230,166,.22),
+                          0 0 42px rgba(65,230,166,.06); }
+  .win .titlebar { display:flex; align-items:center; gap:9px;
+                   padding:7px 10px 6px; background:#0c1119;
+                   border-bottom:3px double var(--border2);
+                   cursor:grab; user-select:none; -webkit-user-select:none;
+                   touch-action:none; flex:0 0 auto; }
+  .win .titlebar:active { cursor:grabbing; }
+  .win .tcorner { color:var(--acc); font-size:11px; }
+  .win .tname { font-size:12px; letter-spacing:1.8px; display:flex;
+                align-items:center; gap:7px; }
+  .win .tname .glyph { font-size:13px; color:var(--acc); }
+  .win .tstat { font-size:9.5px; letter-spacing:1.2px; color:var(--dim); }
+  .win .tstat.live { color:var(--acc); }
+  .win .tstat.live::before { content:"● "; }
+  .win .close { border:1px solid var(--border); background:transparent;
+                color:var(--dim); font-size:11px; cursor:pointer;
+                padding:2px 8px; border-radius:4px; line-height:1.3;
+                margin-left:auto; font-family:inherit; }
+  .win .close:hover { border-color:var(--danger); background:#2a1418;
+                      color:var(--danger); }
+  .win .appbody { flex:1; overflow:auto; padding:16px 20px; font-size:12.5px;
+                  background:
+                    repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0 1px,
+                                              transparent 1px 3px),
+                    var(--panel); }
+  .win .appbody::-webkit-scrollbar { width:9px; }
+  .win .appbody::-webkit-scrollbar-thumb { background:var(--border2);
+                                           border-radius:4px; }
+  .win .appbody::-webkit-scrollbar-track { background:var(--panel2); }
+
+  .app-what { margin:0 0 16px; font-size:11px; line-height:1.6; color:var(--dim);
+              border-left:2px solid var(--acc-dim); padding:2px 0 2px 10px; }
+  .app-head { display:flex; align-items:center; gap:14px; margin-bottom:12px; }
+  .app-head .glyph { font-size:30px; line-height:1; color:var(--acc);
+                     text-shadow:0 0 16px rgba(65,230,166,.5);
+                     border:1px solid var(--border); border-radius:6px;
+                     padding:8px 10px; background:var(--panel2); }
+  .app-head h3 { margin:0; font-size:15px; letter-spacing:2.2px; }
+  .app-head .desc { margin:2px 0 0; color:var(--dim); font-size:10.5px;
+                    letter-spacing:.6px; }
+
+  /* gauge bars: blocky ▓ fills */
+  .gauges { display:grid; grid-template-columns:1fr 1fr; gap:9px 18px;
+            margin-bottom:16px; }
+  .gauge { display:flex; align-items:center; gap:9px; }
+  .gauge .g-k { width:34px; font-size:10px; letter-spacing:1.4px;
+                color:var(--dim); }
+  .gauge .g-track { flex:1; height:12px; border:1px solid var(--border);
+                    background:var(--panel2); border-radius:2px;
+                    overflow:hidden; }
+  .gauge .g-fill { height:100%; width:0%;
+                   background:repeating-linear-gradient(90deg,
+                     var(--acc) 0 6px, rgba(65,230,166,.18) 6px 8px);
+                   transition:width .3s ease; }
+  .gauge .g-v { width:38px; text-align:right; font-size:11px; color:var(--acc); }
+
+  .placeholder { border:1px dashed var(--border2); border-radius:8px;
+                 padding:20px; text-align:center; color:var(--dim);
+                 line-height:1.75; background:rgba(10,14,21,.5); }
+  .placeholder .ph-top { font-size:10px; letter-spacing:2.6px;
+                         color:var(--acc); margin-bottom:12px; }
+  .placeholder .ph-glyph { font-size:34px; color:var(--fg); display:block;
+                           margin-bottom:8px; opacity:.85; }
+  .placeholder b { color:var(--fg); font-weight:600; }
+  .placeholder .ph-sub { font-size:10.5px; color:var(--dim); margin-top:6px; }
+
+  /* help app */
+  .help h3 { margin:0 0 14px; font-size:15px; letter-spacing:2.2px; }
+  .hsec { margin-bottom:20px; }
+  .hsec-h { display:flex; align-items:center; gap:10px; margin:0 0 9px;
+            font-size:10.5px; letter-spacing:2.4px; color:var(--acc); }
+  .hsec-h::before, .hsec-h::after { content:""; flex:1; height:1px;
+                                    background:linear-gradient(90deg,
+                                      transparent, var(--border2), transparent); }
+  .help table { width:100%; border-collapse:collapse; font-size:12px; }
+  .help td { padding:5px 8px; border-bottom:1px dotted var(--border); }
+  .help td:first-child { color:var(--acc); white-space:nowrap; width:1%; }
+  .help p { margin:4px 0; line-height:1.65; color:var(--dim); }
+  .help-apps { display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; }
+  .help-app { display:flex; align-items:center; gap:7px; padding:5px 8px;
+              border:1px solid var(--border); border-radius:4px; font-size:11px;
+              background:var(--panel2); }
+  .help-app .glyph { font-size:13px; color:var(--acc); }
+  .help-app .nm { color:var(--fg); letter-spacing:1px; }
+  .help-app .ds { color:var(--dim); font-size:9px; margin-left:auto;
+                  letter-spacing:.5px; }
+
+  /* ── serial log drawer ─────────────────────────────────────────── */
+  #log { position:fixed; left:0; right:0; bottom:38px; height:212px; z-index:40;
+         overflow:auto; background:rgba(7,9,14,.97); border-top:1px solid var(--border);
+         padding:10px 16px; font-size:11.5px; white-space:pre-wrap;
+         word-break:break-all; display:none; }
+  #log.open { display:block; }
+  #log::-webkit-scrollbar { width:9px; }
+  #log::-webkit-scrollbar-thumb { background:var(--border2); border-radius:4px; }
+  #log .ln-stats { color:var(--acc); }
+  #log .ln-err   { color:var(--danger); }
+  #log .ln-warn  { color:var(--amber); }
+
+  /* ── taskbar ───────────────────────────────────────────────────── */
+  .taskbar { position:relative; flex:0 0 auto; height:38px; z-index:50;
+             display:flex; align-items:center; gap:12px; padding:0 14px;
+             background:linear-gradient(180deg, #0e131b, #090d13);
+             border-top:1px solid var(--border); font-size:11.5px; }
+  .tb-brand { color:var(--acc); letter-spacing:2px; font-size:11px;
+              white-space:nowrap; }
+  .tb-brand::before { content:"● "; }
+  #status { color:var(--dim); white-space:nowrap; }
+  #status.ok { color:var(--acc); }
+  #stats { color:var(--dim); font-size:10px; letter-spacing:.6px;
+           white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tb-btn { font:inherit; font-size:10.5px; letter-spacing:.8px;
+            background:var(--panel2); color:var(--fg);
+            border:1px solid var(--border); border-radius:4px;
+            padding:4px 11px; cursor:pointer; white-space:nowrap; }
+  .tb-btn:hover { border-color:var(--acc-dim); color:var(--acc);
+                  box-shadow:0 0 0 1px rgba(65,230,166,.2); }
+  .hint { color:var(--dim); font-size:10px; letter-spacing:.6px;
+          margin-left:auto; white-space:nowrap; overflow:hidden;
+          text-overflow:ellipsis; }
+  /* ── app simulations ──────────────────────────────────────────── */
+  .sim { display:grid; gap:10px; }
+  .sim-row { display:flex; align-items:center; gap:8px; }
+  .sim-k { flex:0 0 auto; font-size:10px; letter-spacing:1.6px;
+           color:var(--acc); min-width:72px; }
+  .sim-v { font-size:12px; color:var(--fg); }
+  .sim-v.mut { color:var(--dim); }
+  .sim-v.warn { color:var(--amber); }
+  .sim-v.err { color:var(--danger); }
+  .sim-v.ok { color:var(--acc); }
+  .barx { flex:1; height:11px; border:1px solid var(--border);
+          background:var(--panel2); border-radius:2px; overflow:hidden;
+          min-width:60px; }
+  .barx > i { display:block; height:100%; width:0%;
+              background:repeating-linear-gradient(90deg,
+                var(--acc) 0 6px, rgba(65,230,166,.18) 6px 8px);
+              transition:width .4s ease; }
+  .barx.amb > i { background:repeating-linear-gradient(90deg,
+                    var(--amber) 0 6px, rgba(255,180,84,.18) 6px 8px); }
+  .logbox { border:1px solid var(--border); background:var(--panel2);
+            border-radius:4px; padding:7px 9px; height:128px; overflow:auto;
+            font-size:11px; line-height:1.5; }
+  .logbox::-webkit-scrollbar { width:8px; }
+  .logbox::-webkit-scrollbar-thumb { background:var(--border2); border-radius:4px; }
+  .logbox .L0 { color:var(--fg); } .logbox .L1 { color:var(--dim); }
+  .logbox .L2 { color:var(--acc); } .logbox .L3 { color:var(--amber); }
+  .logbox .L4 { color:var(--danger); }
+  .chip { display:inline-block; border:1px solid var(--border);
+          background:var(--panel2); color:var(--fg); border-radius:3px;
+          padding:1px 7px; margin:0 4px 4px 0; font-size:10.5px; }
+  .chip.on { border-color:var(--acc-dim); color:var(--acc);
+             box-shadow:0 0 0 1px rgba(65,230,166,.18); }
+  .kv { display:grid; grid-template-columns:auto 1fr; gap:2px 14px;
+        font-size:11.5px; }
+  .kv dt { color:var(--dim); letter-spacing:1.2px; }
+  .kv dd { margin:0; color:var(--fg); }
+  .sub { font-size:10px; letter-spacing:1.8px; color:var(--dim); }
+  .hl-row { display:flex; align-items:center; gap:8px; font-size:11px;
+            padding:2px 0; }
+  .hl-row .mac { color:var(--fg); min-width:150px; }
+  .hl-row .vend { color:var(--dim); flex:1; }
+  .hl-row .rs { color:var(--amber); }
+  .hl-row .st { color:var(--acc); }
+  .scanbar { display:flex; gap:3px; height:26px; align-items:flex-end; }
+  .scanbar i { flex:1; background:var(--acc-dim); opacity:.55;
+               transition:height .5s ease, opacity .5s ease; }
+  .scanbar i.on { background:var(--acc); opacity:.95; }
+
+  /* ── deck screen — dummy render of the real 240x320 app UI ───── */
+  .deck { border:1px solid var(--border2); border-radius:6px; overflow:hidden;
+          background:radial-gradient(130% 90% at 50% 0%, #0c1a22 0%, #06080d 75%);
+          box-shadow:inset 0 0 46px rgba(0,0,0,.55), 0 0 0 1px rgba(0,0,0,.4);
+          font-size:11.5px; line-height:1.6; }
+  .deck-bar { display:flex; align-items:center; justify-content:space-between;
+              gap:10px; padding:6px 11px; background:#0a1119;
+              border-bottom:1px solid var(--border2); }
+  .deck-title { color:var(--fg); letter-spacing:2.4px; font-size:11px;
+                text-shadow:0 0 8px rgba(65,230,166,.25); }
+  .deck-head { color:var(--dim); font-size:10px; letter-spacing:1px;
+               white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .deck-head.warn { color:var(--amber); }
+  .deck-body { padding:9px 11px 11px; }
+  .deck-row { color:var(--dim); white-space:pre; }
+  .deck-row.cur { color:var(--fg); }
+  .deck-row.armed { color:var(--amber); }
+  .deck-row .dk-suf { color:var(--amber); }
+  .deck-infobox { margin-top:9px; border-top:1px dashed var(--border);
+                  padding-top:7px; color:var(--dim); font-size:10.5px;
+                  display:grid; gap:2px; }
+  .deck-infobox .dk-info { white-space:pre-wrap; }
+  .deck-infobox .dk-info.ok { color:var(--acc); }
+  .deck-infobox .dk-info.warn { color:var(--amber); }
+  .deck-infobox .dk-info.err { color:var(--danger); }
+  .deck-infobox .dk-qr { display:flex; justify-content:center; }
+  .deck-status { border-top:1px solid var(--border); background:#0a1119;
+                 padding:5px 11px; color:var(--dim); font-size:10px;
+                 letter-spacing:1.4px; }
+  .deck-status.warn { color:var(--amber); }
+  .deck-footer { border-top:1px solid var(--border2); background:#060a10;
+                 padding:5px 11px; color:var(--dim); font-size:9px;
+                 letter-spacing:.6px; white-space:nowrap; overflow:hidden;
+                 text-overflow:ellipsis; }
+  canvas.qr, canvas.trace { width:100%; image-rendering:pixelated;
+                            border:1px solid var(--border); border-radius:4px;
+                            background:#fff; }
+  .sim .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  @media (max-width: 900px) { .hint { display:none; } .sysbox { display:none; } }
+</style>
+</head>
+<body>
+<div class="crt"></div>
+
+<header class="topbar">
+  <div>
+    <pre class="banner">__     _____ ___ ____     ___  ____  
+\ \   / / _ \_ _|  _ \   / _ \/ ___| 
+ \ \ / / | | | || | | | | | | \___ \ 
+  \ V /| |_| | || |_| | | |_| |___) |
+   \_/  \___/___|____/   \___/|____/  </pre>
+    <div class="tagline">◆ CYBERDECK <span class="sp">·</span> WEB HARNESS <span class="sp">·</span> 24 APPS <span class="sp">·</span> 240×320</div>
+    <div class="ticker"><span class="tk-prompt">›</span><span id="ticker">booting…</span><span class="caret">&nbsp;▮</span></div>
+  </div>
+  <div class="sysbox">
+    <div class="sb-row"><span class="sb-k">LINK</span><span class="sb-v ok" id="linkdot">●</span></div>
+    <div class="sb-row"><span class="sb-k">APP</span><span class="sb-v" id="sbapp">HOME</span></div>
+    <div class="sb-row"><span class="sb-k">RES</span><span class="sb-v">240×320</span></div>
+  </div>
+</header>
+
+<main class="desktop">
+  <div class="icons icons-left" id="icons-left"></div>
+  <div class="icons icons-right" id="icons-right"></div>
+  <canvas id="char" width="480" height="660"></canvas>
+  <div id="windows"></div>
+</main>
+
+<div id="log"></div>
+
+<footer class="taskbar">
+  <span class="tb-brand">VOID-OS</span>
+  <span id="status">connecting…</span>
+  <span id="stats"></span>
+  <button class="tb-btn" id="logbtn">▤ serial log</button>
+  <button class="tb-btn" id="modebtn" title="connection transport — Brave Shields may block WebSockets">link:auto</button>
+  <button class="tb-btn" id="restart">⟳ restart</button>
+  <span class="hint">keys a/A b/B c/C · ,/. pot · 0-9 set · esc close · q quit</span>
+</footer>
+
+<div class="boot" id="boot" role="status" aria-label="booting">
+  <pre id="boot-log"></pre>
+  <div class="b-bar-track"><div class="b-bar" id="boot-bar"></div></div>
+  <div class="b-status" id="boot-status">POWER ON</div>
+</div>
+
+<script>
+// ── app catalogue — index order matches firmware config.h ───────────────
+const APPS = [
+  {name:"HOME",  desc:"desktop",  glyph:"⌂",
+   what:"The base screen — the app grid. Selecting it from anywhere returns the device to HOME."},
+  {name:"STAT",  desc:"vitals",   glyph:"▤",
+   what:"Vitals HUD: CPU temp, battery, heart rate and signal strength. In the harness these mirror this machine's real temp/load where the host reports them."},
+  {name:"WIFI",  desc:"wifi/ble", glyph:"≋",
+   what:"Wi-Fi/BLE audit: scan nearby APs, capture management frames, collect EAPOL/PMKID handshakes and inspect BLE peripherals. Needs a wireless card in monitor mode."},
+  {name:"LOG",   desc:"logger",   glyph:"⧉",
+   what:"Central capture writer — routes sniffed traffic to PCAP, wardriving to CSV, and GPS tracks to GPX on the SD card."},
+  {name:"RADIO", desc:"sub-ghz",  glyph:"⌁",
+   what:"Sub-GHz radio tool (CC1101): sweep the 315/433/868/915 MHz bands and log raw packets."},
+  {name:"NFC",   desc:"rfid",     glyph:"⬡",
+   what:"RFID/NFC audit via the PN532 module: read, emulate, crack and write MIFARE Classic and ISO14443 tags."},
+  {name:"IR",    desc:"infrared", glyph:"▣",
+   what:"Infrared remote: transmit and learn IR codes for TVs and other gear through the TSOP receiver and IR LED."},
+  {name:"SYS",   desc:"system",   glyph:"✧",
+   what:"Device system dashboard: chip, memory, uptime and load. Shows this machine's real stats in the harness, the deck's own on the Pi."},
+  {name:"BUS",   desc:"cable",    glyph:"⚡",
+   what:"Wired-protocol sniffer for UART, 1-Wire, Wiegand, iButton and console taps; also drives GPIO and DTMF."},
+  {name:"HID",   desc:"badble",   glyph:"⌨",
+   what:"Keyboard emulation (BadUSB/BadBLE): types a stored script over USB HID or Bluetooth. Needs /dev/hidg0 or bluez."},
+  {name:"DARK",  desc:"stealth",  glyph:"◐",
+   what:"Stealth hub: toggles Wi-Fi, BLE, network and physical radios off and schedules MAC re-rolls to go dark."},
+  {name:"SCAN",  desc:"recon",    glyph:"◎",
+   what:"Network recon: ARP host discovery, TCP port sweeps with service hints, and soft-AP client enumeration."},
+  {name:"ROGUE", desc:"evilap",   glyph:"☠",
+   what:"Rogue AP with captive portal and DNS spoofing — harvests portal logins straight to loot/logins.csv."},
+  {name:"SNIFF", desc:"urllog",   glyph:"⌖",
+   what:"HTTP sniffer: logs URLs and cookies on the wire, with an optional MITM proxy; dumps to loot CSV."},
+  {name:"FUZZ",  desc:"fuzzer",   glyph:"✸",
+   what:"HTTP fuzzer: throws repeated malformed requests at a target and logs status + latency to loot/fuzz_*.csv."},
+  {name:"WEB",   desc:"scrape",   glyph:"✇",
+   what:"Lightweight web scraper: fetch a page, parse title, headings and links, and save the raw HTML to loot."},
+  {name:"BODY",  desc:"bodies",   glyph:"◍",
+   what:"Passive Wi-Fi presence tracker: listens for probe requests and maps vendor OUIs to nearby devices."},
+  {name:"HELP",  desc:"cheat",    glyph:"?",
+   what:"Built-in cheatsheet: keyboard map, HAL keys and per-app quick reference."},
+  {name:"DROP",  desc:"usb",      glyph:"⏏",
+   what:"USB drop-artefact generator: builds an autorun + payload that mounts as a USB Mass Storage gadget."},
+  {name:"QR",    desc:"gen",      glyph:"▦",
+   what:"QR-code generator: encode a URL or text, show it on screen and save it to /sd/qr.bmp."},
+  {name:"LEAK",  desc:"leaks",    glyph:"⬒",
+   what:"Leak scanner: greps loot for secrets, hashes samples and cross-checks known breach dumps."},
+  {name:"MARAUD",desc:"maraud",   glyph:"✦",
+   what:"Marauder-style Wi-Fi attack sheet: beacon floods, deauth and scout in monitor mode."},
+  {name:"OSINT", desc:"osint",    glyph:"◉",
+   what:"Open-source intel gatherer: WHOIS, DNS, subdomain and geolocation lookups via CLI tools."},
+  {name:"HARDEN",desc:"defend",   glyph:"◈",
+   what:"Self-hardening dashboard: runs UFW, fail2ban, rootkit and Lynis checks plus OS updates to lock the box down."},
+];
+
+let ws = null;
+// Connection transport. Chromium (Chrome & Brave) render identically; the
+// only Chrome-vs-Brave difference is Brave Shields potentially blocking the
+// WebSocket. We auto-fall back to HTTP polling and let the operator force/
+// toggle the mode with the taskbar "link:" button or ?http in the URL.
+let transport = new URLSearchParams(location.search).has("http") ? "http" : "auto";
+let pollIv = null;
+const statusEl = document.getElementById("status");
+const statsEl  = document.getElementById("stats");
+const logEl    = document.getElementById("log");
+const tickerEl = document.getElementById("ticker");
+const linkDot  = document.getElementById("linkdot");
+const appEl    = document.getElementById("sbapp");
+
+let httpMode = false;   // set when the WebSocket is blocked; uses HTTP polling
+function send(s){
+  if (httpMode){
+    try { fetch("/cmd?line=" + encodeURIComponent(s), {cache: "no-store"}); } catch(e){}
+    return;
+  }
+  if (ws && ws.readyState===WebSocket.OPEN) ws.send(s);
+}
+function setStatus(ok, txt){
+  statusEl.className = ok ? "ok" : "";
+  statusEl.textContent = txt;
+  linkDot.className = "sb-v " + (ok ? "ok" : "bad");
+  linkDot.textContent = ok ? "●" : "○";
+}
+
+// ── icon panels — 12 apps on the left, 12 on the right ───────────────────
+function buildPanel(el, apps, base){
+  apps.forEach((app, i) => {
+    const b = document.createElement("button");
+    b.className = "icon";
+    b.title = app.name + " — " + app.desc;
+    b.innerHTML =
+      `<span class="idx">◆ ${String(base + i + 1).padStart(2, "0")}</span>` +
+      `<span class="glyph">${app.glyph}</span>` +
+      `<span class="name">${app.name}</span>` +
+      `<span class="desc">${app.desc}</span>`;
+    b.addEventListener("click", ()=> launchApp(app));
+    el.appendChild(b);
+  });
+}
+buildPanel(document.getElementById("icons-left"),  APPS.slice(0, 12), 0);
+buildPanel(document.getElementById("icons-right"), APPS.slice(12, 24), 12);
+
+function launchApp(app){
+  if (app.name === "HOME"){ closeAll(); return; }   // closeAll sends launch HOME
+  appEl.textContent = app.name;
+  send("CMD launch " + app.name);
+  openWindow(app);
+}
+
+// ── draggable app windows ───────────────────────────────────────────────
+const wins = {};
+let winCount = 0;
+let zTop = 10;
+
+function focusWin(win){
+  win.classList.add("focus");
+  win.style.zIndex = ++zTop;
+  for (const w of Object.values(wins)) if (w !== win) w.classList.remove("focus");
+}
+
+function openWindow(app){
+  if (wins[app.name]){ focusWin(wins[app.name]); return; }
+  const win = document.createElement("div");
+  win.className = "win";
+  win.innerHTML =
+    `<div class="titlebar">
+       <span class="tcorner">╭─</span>
+       <span class="tname"><span class="glyph">${app.glyph}</span>${app.name}</span>
+       <span class="tstat">${app.desc}</span>
+       <button class="close" title="close">✕</button>
+     </div>
+     <div class="appbody">${appBodyHTML(app)}</div>`;
+  const W = 500, H = 380, off = (winCount % 8) * 26;
+  win.style.width = W + "px"; win.style.height = H + "px";
+  win.style.left = Math.max(14, Math.round((innerWidth - W) / 2 - 60 + off)) + "px";
+  win.style.top  = Math.max(126, Math.round((innerHeight - H) / 2 - 70 + off)) + "px";
+  const tb = win.querySelector(".titlebar");
+  tb.addEventListener("pointerdown", (e)=>{
+    if (e.target.classList.contains("close")) return;
+    e.preventDefault();
+    const r = win.getBoundingClientRect();
+    const dx = e.clientX - r.left, dy = e.clientY - r.top;
+    const move = ev=>{ win.style.left = (ev.clientX - dx) + "px";
+                       win.style.top  = (ev.clientY - dy) + "px"; };
+    const up = ()=>{ window.removeEventListener("pointermove", move);
+                     window.removeEventListener("pointerup", up); };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  });
+  win.querySelector(".close").addEventListener("click", ()=> closeWindow(app.name));
+  win.addEventListener("pointerdown", ()=> focusWin(win));
+  document.getElementById("windows").appendChild(win);
+  wins[app.name] = win; winCount++;
+  focusWin(win);
+  fillStats(win);
+  mountSim(app, win);
+}
+
+function closeWindow(name){
+  const win = wins[name]; if (!win) return;
+  win.remove(); delete wins[name];
+  appEl.textContent = "HOME";
+  if (Object.keys(wins).length === 0) send("CMD launch HOME");
+}
+
+function closeAll(){
+  for (const n of Object.keys(wins)){ const w = wins[n]; w.remove(); delete wins[n]; }
+  appEl.textContent = "HOME";
+  send("CMD launch HOME");
+}
+
+const GAUGE_HTML =
+    `<div class="gauges">
+      <div class="gauge"><span class="g-k">CPU</span><div class="g-track"><div class="g-fill" data-val="cpu"></div></div><span class="g-v gv-cpu">--</span></div>
+      <div class="gauge"><span class="g-k">MEM</span><div class="g-track"><div class="g-fill" data-val="mem"></div></div><span class="g-v gv-mem">--</span></div>
+      <div class="gauge"><span class="g-k">SD</span><div class="g-track"><div class="g-fill" data-val="sd"></div></div><span class="g-v gv-sd">--</span></div>
+      <div class="gauge"><span class="g-k">BAT</span><div class="g-track"><div class="g-fill" data-val="bat"></div></div><span class="g-v gv-bat">--</span></div>
+    </div>`;
+
+function appBodyHTML(app){
+  if (app.name === "HELP") return helpHTML();
+  return `
+    <div class="app-head">
+      <span class="glyph">${app.glyph}</span>
+      <div><h3>${app.name}</h3><p class="desc">${app.desc} · browser sim</p></div>
+    </div>
+    <p class="app-what">${app.what}</p>` + GAUGE_HTML +
+    `<div class="sim" data-app="${app.name}"></div>`;
+}
+
+function helpHTML(){
+  const rows = APPS.map(a =>
+    `<div class="help-app"><span class="glyph">${a.glyph}</span><span class="nm">${a.name}</span><span class="ds">${a.desc}</span></div>`).join("");
+  return `
+    <div class="help">
+      <h3>Help & cheatsheet</h3>
+      <p class="app-what">Built-in cheatsheet: keyboard map, HAL keys and per-app quick reference for everything on the deck.</p>
+      <section class="hsec">
+        <div class="hsec-h">KEYBOARD</div>
+        <table>
+          <tr><td>a / A · b / B · c / C</td><td>button press / release</td></tr>
+          <tr><td>, / . · ↑ / ↓</td><td>potentiometer nudge</td></tr>
+          <tr><td>0 – 9</td><td>set potentiometer (coarse)</td></tr>
+          <tr><td>Esc</td><td>close the top window</td></tr>
+          <tr><td>q</td><td>quit</td></tr>
+        </table>
+      </section>
+      <section class="hsec">
+        <div class="hsec-h">DESKTOP</div>
+        <p>Click an app tile to open its window. Drag windows by the title bar; ✕ or Esc closes them. The gear's eye follows your cursor.</p>
+      </section>
+      <section class="hsec">
+        <div class="hsec-h">APPS · ${APPS.length}</div>
+        <div class="help-apps">${rows}</div>
+      </section>
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  APP SIMULATIONS — each window renders a dummy of the real app screen.
+//  SIM[name].h  = body HTML  ·  SIM[name].t(win, s) = per-0.5s updater
+// ════════════════════════════════════════════════════════════════════
+
+// ── real host info (served by the harness at /sysinfo) ────────────────
+// The SYS/STAT windows show actual machine data when the page runs behind
+// the harness; standalone (no server) they fall back to the fake sims.
+let sysCache = null, sysCacheAt = 0;
+function sysInfo(){
+  const now = performance.now();
+  if (sysCache && now - sysCacheAt < 1500) return Promise.resolve(sysCache);
+  return fetch("/sysinfo", {cache: "no-store"})
+    .then(r => r.ok ? r.json() : null)
+    .then(j => { if (j){ sysCache = j; sysCacheAt = now; } return j; })
+    .catch(() => null);
+}
+function fmtUptime(sec){
+  const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = Math.floor(sec % 60);
+  return h + ":" + String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+}
+
+// ── QR code generator — byte mode, ECC MEDIUM, versions 1–6 ──────────
+// Port of Nayuki's qrcodegen (https://www.nayuki.io/page/qr-code-generator-library, MIT).
+// Trimmed to what this app needs.
+// ponytail: mask fixed at 0 — spec-valid and scannable; add penalty-based
+// mask selection only if some device ever rejects one of these.
+const QR_V = {  // version -> {ec: ecc cw/block, blk: blocks, data: data cw}
+  1:{ec:10, blk:1, data:16}, 2:{ec:16, blk:1, data:28}, 3:{ec:22, blk:1, data:48},
+  4:{ec:28, blk:2, data:72}, 5:{ec:36, blk:2, data:98}, 6:{ec:44, blk:2, data:128},
+};
+const QR_ALIGN = {1:[], 2:[6,18], 3:[6,22], 4:[6,26], 5:[6,30], 6:[6,34]};
+const GF_EXP = new Array(512), GF_LOG = new Array(256);
+(function(){
+  let x = 1;
+  for (let i = 0; i < 255; i++){ GF_EXP[i] = x; GF_LOG[x] = i; x <<= 1; if (x & 0x100) x ^= 0x11D; }
+  for (let i = 255; i < 512; i++) GF_EXP[i] = GF_EXP[i - 255];
+})();
+const gfMul = (a, b) => a === 0 || b === 0 ? 0 : GF_EXP[GF_LOG[a] + GF_LOG[b]];
+function rsDivisor(degree){
+  const res = new Array(degree).fill(0);
+  res[degree - 1] = 1;
+  let root = 1;
+  for (let i = 0; i < degree; i++){
+    for (let j = 0; j < degree; j++){
+      res[j] = gfMul(res[j], root);
+      if (j + 1 < degree) res[j] ^= res[j + 1];
+    }
+    root = gfMul(root, 2);
+  }
+  return res;
+}
+function rsRemainder(data, divisor){
+  const res = new Array(divisor.length).fill(0);
+  for (const b of data){
+    const factor = b ^ res[0];
+    res.shift(); res.push(0);
+    for (let i = 0; i < res.length; i++) res[i] ^= gfMul(divisor[i], factor);
+  }
+  return res;
+}
+function bitsOf(bits, val, len){
+  for (let i = len - 1; i >= 0; i--) bits.push((val >>> i) & 1);
+}
+function makeQR(text){
+  const bytes = Array.from(text, c => c.charCodeAt(0) & 0xFF);
+  let ver = 1;
+  while (ver < 6 && bytes.length > QR_V[ver].data - 2) ver++;
+  const v = QR_V[ver], size = ver * 4 + 17;
+  // ── data codewords: byte mode + terminator + pad ──
+  const bits = [];
+  bitsOf(bits, 4, 4);
+  bitsOf(bits, bytes.length, 8);
+  for (const b of bytes) bitsOf(bits, b, 8);
+  bitsOf(bits, 0, Math.min(4, v.data * 8 - bits.length));
+  while (bits.length % 8) bits.push(0);
+  for (let i = 0, pad = 0xEC; bits.length < v.data * 8; i++){
+    bitsOf(bits, pad, 8); pad = (pad === 0xEC) ? 0x11 : 0xEC;
+  }
+  const data = [];
+  for (let i = 0; i < bits.length; i += 8) data.push(parseInt(bits.slice(i, i + 8).join(""), 2));
+  // ── error correction + interleave (v.ec is the TOTAL across blocks) ──
+  const per = v.data / v.blk, eper = v.ec / v.blk;
+  const blocks = [];
+  for (let b = 0; b < v.blk; b++){
+    const blk = data.slice(b * per, (b + 1) * per);
+    blocks.push({d: blk, e: rsRemainder(blk, rsDivisor(eper))});
+  }
+  const cw = [];
+  for (let i = 0; i < per; i++) for (const blk of blocks) cw.push(blk.d[i]);
+  for (let i = 0; i < eper; i++) for (const blk of blocks) cw.push(blk.e[i]);
+  // ── matrix: function patterns ──
+  const m = Array.from({length: size}, () => new Array(size).fill(-1));
+  const func = Array.from({length: size}, () => new Array(size).fill(false));
+  const set = (y, x, on) => { m[y][x] = on ? 1 : 0; func[y][x] = true; };
+  for (const [fx, fy] of [[0,0],[size-7,0],[0,size-7]]){      // finder + separator
+    for (let dy = -1; dy <= 7; dy++) for (let dx = -1; dx <= 7; dx++){
+      const x = fx + dx, y = fy + dy;
+      if (x < 0 || x >= size || y < 0 || y >= size) continue;
+      const inRing = dx >= 0 && dx <= 6 && dy >= 0 && dy <= 6 &&
+        (dx === 0 || dx === 6 || dy === 0 || dy === 6 || (dx >= 2 && dx <= 4 && dy >= 2 && dy <= 4));
+      set(y, x, inRing);
+    }
+  }
+  for (let i = 0; i < size; i++){                              // timing
+    if (m[6][i] === -1) set(6, i, i % 2 === 0);
+    if (m[i][6] === -1) set(i, 6, i % 2 === 0);
+  }
+  const pos = QR_ALIGN[ver], last = pos.length - 1;            // alignment
+  for (let j = 0; j < pos.length; j++) for (let i = 0; i < pos.length; i++){
+    if ((i === 0 && j === 0) || (i === 0 && j === last) || (i === last && j === 0)) continue;
+    const cy = pos[j], cx = pos[i];
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++)
+      set(cy + dy, cx + dx, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
+  }
+  // ── format info (ECC M = 00, mask 0) + dark module (before data, so placement skips them) ──
+  let fdata = 0b00 << 3 | 0, rem = fdata;
+  for (let i = 0; i < 10; i++) rem = (rem << 1) ^ ((rem >>> 9) * 0x537);
+  const fmt = ((fdata << 10) | rem) ^ 0x5412;
+  const fbit = i => (fmt >>> i) & 1;
+  for (let i = 0; i <= 5; i++) set(i, 8, fbit(i));
+  set(7, 8, fbit(6)); set(8, 8, fbit(7)); set(8, 7, fbit(8));
+  for (let i = 9; i < 15; i++) set(8, 14 - i, fbit(i));
+  for (let i = 0; i < 8; i++) set(8, size - 1 - i, fbit(i));
+  for (let i = 8; i < 15; i++) set(size - 15 + i, 8, fbit(i));
+  set(size - 8, 8, true);
+  // ── data placement (zigzag, skipping column 6) ──
+  let bit = 0, upward = true;
+  for (let col = size - 1; col >= 1; col -= 2){
+    if (col === 6) col--;
+    for (let k = 0; k < size; k++){
+      const row = upward ? size - 1 - k : k;
+      for (let j = 0; j < 2; j++){
+        const x = col - j;
+        if (m[row][x] === -1){
+          m[row][x] = bit < cw.length * 8 ? (cw[bit >> 3] >>> (7 - (bit & 7))) & 1 : 0;
+          bit++;
+        }
+      }
+    }
+    upward = !upward;
+  }
+  // ── mask 0: invert data modules where (x+y) is even ──
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++)
+    if (!func[y][x] && (x + y) % 2 === 0) m[y][x] = 1 - m[y][x];
+  return m;
+}
+
+// ── deck-screen renderer — a dummy of the real 240x320 app UI ───────
+// Every firmware app is the same shape: a title bar with header values,
+// menu rows with a ">" cursor, an info panel, a status line and a footer
+// of button hints. renderDeck() draws that; menuSim() animates it the
+// way the real apps behave (cursor walks the rows, [A] arms a row →
+// amber, status/head/info stay alive).
+function renderDeck(win, d){
+  const el = win.querySelector(".deck");
+  if (!el) return;
+  const head = d.head ? `<span class="deck-head ${d.headCls||""}">${d.head}</span>` : "";
+  const rows = (d.rows||[]).map(r =>
+    `<div class="deck-row ${r.cls||""}">${r.l}${r.suf ? `<span class="dk-suf"> ${r.suf}</span>` : ""}</div>`).join("");
+  const info = (d.info||[]).map(i =>
+    `<div class="dk-info ${i.cls||""}">${i.t || i}</div>`).join("");
+  el.innerHTML =
+    `<div class="deck-bar"><span class="deck-title">${d.title}</span>${head}</div>` +
+    `<div class="deck-body"><div class="deck-rows">${rows}</div>` +
+    (info ? `<div class="deck-infobox">${info}</div>` : "") + `</div>` +
+    `<div class="deck-status ${d.statusCls||""}">${d.status||""}</div>` +
+    `<div class="deck-footer">${d.footer||""}</div>`;
+}
+
+function menuSim(win, s, M){
+  if (!s.c) s.c = {cur: 0, arm: -1, n: 0, auto: true};
+  s.c.M = M;
+  const c = s.c; c.n++;
+  const n = M.rows.length;
+  if (c.forced && --c.forcedLeft <= 0) c.forced = null;
+  if (c.auto){                              // cursor only wanders until the user takes over
+    if (c.n % 6 === 0) c.cur = (c.cur + 1) % n;
+    if (c.n % 19 === 0) c.arm = c.arm < 0 ? c.cur : -1;
+  }
+  const rows = M.rows.map((l, i) => ({
+    l, cls: i === c.arm ? "armed" : (i === c.cur ? "cur" : ""),
+    suf: M.suf ? M.suf(i, c) : "",
+  }));
+  renderDeck(win, {
+    title: M.title,
+    head: M.head ? M.head(c) : "",
+    rows,
+    info: M.info ? M.info(c) : [],
+    status: c.forced || (c.arm >= 0 ? M.armed(c) : (M.status ? M.status(c) : "READY")),
+    statusCls: c.arm >= 0 && !c.forced ? "warn" : "",
+    footer: M.footer,
+  });
+}
+
+// ── deck keyboard — the focused window's dummy screen reacts to the
+// same keys the device uses: ,/. or ↑/↓ move the cursor, a arms the
+// row (amber + status), b disarms, c runs the app's [C] action.
+function focusedWin(){
+  let top = null;
+  for (const w of Object.values(wins)) if (w.classList.contains("focus")) top = w;
+  return top;
+}
+function deckKey(k){
+  if (!"abcABC.,".includes(k) && k !== "ArrowUp" && k !== "ArrowDown") return;
+  const win = focusedWin();
+  if (!win) return;
+  const simEl = win.querySelector(".sim");
+  const name = simEl && simEl.dataset.app;
+  if (!name || !SIM[name]) return;
+  const s = win.__s || (win.__s = {});
+  if (SIM[name].key) SIM[name].key(win, s, k);
+  else menuKey(win, s, k);
+  try { SIM[name].t(win, s); } catch(e){}   // re-render right away
+}
+function menuKey(win, s, k){
+  if (!s.c) s.c = {cur: 0, arm: -1, n: 0};
+  const c = s.c; c.auto = false;
+  const M = c.M; if (!M) return;
+  const n = M.rows.length;
+  if (k === "," || k === "ArrowUp")   c.cur = (c.cur + n - 1) % n;
+  else if (k === "." || k === "ArrowDown") c.cur = (c.cur + 1) % n;
+  else if (k === "a" || k === "A")    c.arm = (c.arm === c.cur) ? -1 : c.cur;
+  else if (k === "b" || k === "B")    c.arm = -1;
+  else if (k === "c" || k === "C"){
+    c.arm = -1;
+    if (M.onC){ c.forced = M.onC(c); c.forcedLeft = 10; }
+  }
+}
+
+const SIM = {
+  STAT: {
+    h: `<div class="deck"></div>`,
+    t(win, s){
+      if (!s.c){ s.c = {n:0, hist:[]}; }
+      const c = s.c; c.n++;
+      sysInfo().then(j => { if (j && j.temp_c != null) c.realTemp = j.temp_c; });
+      const temp = (c.realTemp != null ? c.realTemp : 34 + Math.random() * 9).toFixed(1);
+      c.hist.push(+temp); if (c.hist.length > 24) c.hist.shift();
+      const spark = c.hist.map(v => "▁▂▃▅▆▇"[Math.max(0, Math.min(6, Math.round((v - 30) / 4)))]).join("");
+      renderDeck(win, {
+        title: "STATUS / VITALS",
+        rows: [
+          { l: "TEMP", suf: temp + " C" },
+          { l: "BAT",  suf: (86 - (c.n % 30)) + " %" },
+          { l: "HRT",  suf: (58 + Math.random() * 30 | 0) + " bpm" },
+          { l: "SIG",  suf: (40 + Math.random() * 55 | 0) + " %" },
+        ],
+        info: [
+          { t: spark || "▁▂▃▅▆▇", cls: "ok" },
+          { t: "CPU 42%  MEM 61%  SD 33%  rx 1234kB" },
+          { t: "up 1:23:45  load 0.42" },
+          { t: "USB OFF" },
+        ],
+        status: "sensor ok",
+        footer: "[B] BACK",
+      });
+    }
+  },
+  WIFI: {
+    h: `<div class="deck"></div>`,
+    t(win, s){ menuSim(win, s, {
+      title: "WIFI/BLE", head: () => "CAPS:00",
+      rows: ["SCAN  (WARD)","CAPT  (MGMT)","HSHK  (EAPOL)","ROGUE (AP)","KARMA (PROBE)","INJCT (FRAME)","BEACN (SPOOF)","BLE   (PASSIVE)","PMKID (RSN)","WPS   (REAP)"],
+      armed: c => ["WARD SCAN","MGMT CAPT","EAPOL HSHK","ROGUE AP","KARMA ON","INJECT ON","BEACN SPOOF","BLE PASSIVE","PMKID EXTRACT","WPS REAP"][c.arm] + " · " + (c.n * 4 % 300) + " pkt",
+      status: () => "READY",
+      info: c => c.arm >= 0 ? [{ t: "4WAY + PKT AP=TP-LINK_5GHz  PMKID ..8f3a", cls: "ok" }] : [],
+      footer: "[A] SELECT  [B] BACK",
+    }); }
+  },
+  LOG: {
+    h: `<div class="deck"></div>`,
+    t(win, s){ menuSim(win, s, {
+      title: "FIELD LOG", head: c => (30 + c.n * 2 % 55) + "%",
+      rows: ["PCAP  (WIFI)","CSV   (WARD)","GPX   (TRACK)","HEAT  (RSSI)","WORD  (DICT)"],
+      armed: c => ["PCAP: REC","CSV: WRITING","GPX: TRACKING","HEAT: LOGGING","WORD: DICT"][c.arm] + " · " + (c.n * 3 | 0) + " rx",
+      status: () => "READY",
+      info: c => [{ t: "→ /mnt/void-os/captures/wifi_" + (1720000000 + c.n * 5) + ".pcap" }],
+      footer: "[A] SELECT  [B] BACK",
+    }); }
+  },
+  RADIO: {
+    h: `<div class="deck"></div>`,
+    t(win, s){ menuSim(win, s, {
+      title: "RADIO / SUBGHZ", head: c => "RSSI:" + (-120 + c.n % 25),
+      rows: ["CAPT  (rx record)","SWEEP (spectrum)","PROTO (modulation)","FIXED (brute)","POCSAG (pagers)","TX    (raw bits)"],
+      armed: c => ["CAPT ACTIVE","SWEEPING","PROTO","FIXED 24b","POCSAG RX","TX RAW"][c.arm] + "  pkts:" + (c.n * 2 | 0),
+      status: () => "READY",
+      info: c => c.arm === 4 ? [{ t: "1234567:HELLO PAGER MSG", cls: "ok" }, { t: "7654321:second message" }] : [],
+      footer: "[A] SELECT  [B] BACK",
+    }); }
+  },
+  NFC: {
+    h: `<div class="deck"></div>`,
+    t(win, s){ menuSim(win, s, {
+      title: "NFC / RFID", head: c => "log:" + (c.n / 9 | 0),
+      rows: ["READ (NDEF)","EMUL (UID)","KEYS  (Mifare)","DICT  (default)","HIST  (last)","WRITE (NFC)","ISO14 (CRYPTO)"],
+      armed: c => ["SCANNING...","EMULATING UID","KEY AUDIT...","32 keys loaded",(c.n / 9 | 0) + " tags logged","WRITE: TBD","CRYPTO: TBD"][c.arm],
+      status: () => "READY",
+      info: c => c.arm === 0 ? [{ t: "TAG: 04 A3 7F 2C 91 B0 80  ISO14443A", cls: "ok" }]
+              : c.arm === 2 ? [{ t: "Dictionary: 32 default keys · Block 4 target" }]
+              : c.arm === 1 ? [{ t: "Emulate UID: 04:A3:7F:2C" }]
+              : c.arm === 4 ? [{ t: "04 A3 7F 2C 91 B0 80  ISO14443A" }, { t: "04 5C D1 9A 22 AA 81  ISO14443A" }]
+              : [],
+      onC: c => c.cur === 4 ? "HIST CLEARED" : "READY",
+      footer: "[A] ARM/SEL  [B] BACK  [C] CLR  POT=row",
+    }); }
+  },
+  IR: {
+    h: `<div class="deck"></div>`,
+    key(win, s, k){
+      if (!s.c){ s.c = {mode:0, n:0, auto:true, learn:false}; }
+      const c = s.c; c.auto = false;
+      if (k === "," || k === "ArrowUp")   c.mode = (c.mode + 2) % 3;
+      else if (k === "." || k === "ArrowDown") c.mode = (c.mode + 1) % 3;
+      else if (k === "a" || k === "A"){
+        if (c.mode === 0)      { c.forced = "SENT [0] SAMSUNG-TV"; c.forcedLeft = 10; }
+        else if (c.mode === 1) { c.forced = c.n % 2 ? "TX: SAMSUNG-TV" : "TVBG DONE"; c.forcedLeft = 10; }
+        else                   { c.learn = !c.learn; }
+      }
+      else if (k === "b" || k === "B"){ c.learn = false; c.forced = "READY"; c.forcedLeft = 10; }
+      else if (k === "c" || k === "C"){
+        c.forced = c.learn ? "SAVED " + (c.n % 30) + " pulses" : "READY";
+        c.learn = false; c.forcedLeft = 10;
+      }
+    },
+    t(win, s){
+      if (!s.c){ s.c = {mode:0, n:0, auto:true, learn:false}; }
+      const c = s.c; c.n++;
+      if (c.forced && --c.forcedLeft <= 0) c.forced = null;
+      if (c.auto && c.n % 12 === 0) c.mode = (c.mode + 1) % 3;
+      const MODES = ["LIB","TVBG","LEARN"];
+      const rows = MODES.map(m => ({
+        l: m + (m === "LIB" ? "  (library)" : m === "TVBG" ? "  (tv-b-gone)" : "  (capture)"),
+        cls: m === MODES[c.mode] ? "cur" : "",
+      }));
+      const info = c.mode === 0
+        ? [{ t: "LIBRARY:\n> [0] SAMSUNG-TV   E0E040BF\n  [1] TPLINK-AC   8F0C3B11" }]
+        : c.mode === 1
+        ? [{ t: c.n % 40 < 20 ? "TRANSMITTING..." : "Press [A] to cycle", cls: "warn" }, { t: "DB: tvbg_power_codes.bin" }]
+        : [{ t: (c.learn ? "LISTENING...  " + (c.n % 30) + " / 1024 pulses" : "Press [A] to learn"), cls: c.learn ? "ok" : "" }, { t: "[C] save capture → /mnt/void-os/ir/" }];
+      renderDeck(win, {
+        title: "IR REMOTE", rows, info,
+        status: c.forced || (c.mode === 0 ? "READY" : c.mode === 1 ? (c.n % 40 < 20 ? "TX: SAMSUNG-TV" : "TVBG DONE") : (c.learn ? "LEARNING..." : "READY")),
+        statusCls: (c.mode === 2 && c.learn) || (c.forced && c.forced !== "READY") ? "warn" : "",
+        footer: "[A] ACT  [B] STOP  [C] SAVE  POT=mode",
+      });
+    }
+  },
+  SYS: {
+    h: `<div class="deck"></div>`,
+    t(win, s){
+      if (!s.c){ s.c = {n:0, bl:68}; }
+      const c = s.c; c.n++;
+      c.bl = 40 + (c.n * 3 % 216);
+      sysInfo().then(j => { if (j) c.host = j; });
+      const j = c.host || {};
+      const load = j.load1 && j.cores ? Math.min(99, Math.round(j.load1 / j.cores * 100)) : 23;
+      renderDeck(win, {
+        title: "SYSTEM",
+        rows: [
+          { l: "Chip:   " + (j.cpu_model ? j.cpu_model.slice(0, 26) : "Raspberry Pi 5") },
+          { l: "Free memory: " + (j.mem_avail ? Math.round(j.mem_avail / 1048576) + " KB" : "123456 KB") },
+          { l: "Display: ILI9341 / SPI0 CE0" },
+          { l: "GPIO: PCF8574 / I2C-1" },
+          { l: "Uptime:      " + (j.uptime != null ? fmtUptime(j.uptime) : "1:23:45") },
+          { l: "CPU load:    " + load + "%" },
+          { l: "BRIGHTNESS", suf: "▓".repeat(Math.max(1, Math.round(c.bl / 16))) + " " + c.bl + "%" },
+        ],
+        info: [{ t: "Power:  ACTIVE" }, { t: "hold [C] 3s nukes storage keys" }],
+        status: "factory reset armed via [C]",
+        footer: "[B]BACK  [C]FACTORY RESET  POT=brightness",
+      });
+    }
+  },
+  BUS: {
+    h: `<div class="deck"></div>`,
+    t(win, s){ menuSim(win, s, {
+      title: "BUS / CABLE",
+      rows: ["LOGIC (CH0-3)","WIEGAND (D0/D1)","iBUTTON (1-W)","CONSOLE (UART)","REMOTE  (TCP)","GPIO   (TEST)","DTMF   (RX)"],
+      armed: c => ["LOGIC: stub","WIEGAND D0/D1","iButton 1-Wire","UART 115200","root@127.0.0.1:22","GPIO: stub","DTMF: stub"][c.arm],
+      status: () => "READY",
+      info: c => c.arm === 3 ? [{ t: "CONSOLE @ 115200b  preset[0]: id" }, { t: "RX: Linux void-os 6.6.31 #1 SMP", cls: "ok" }]
+              : c.arm === 4 ? [{ t: "REMOTE [0] root@127.0.0.1:22" }, { t: "RX: $ uname -a" }]
+              : c.arm === 0 ? [{ t: "4ch logic analyzer · libgpiod @ ~50 kHz — future" }]
+              : c.arm === 1 ? [{ t: "Wiegand D0/D1 — CAPTURING", cls: "warn" }]
+              : [],
+      onC: c => (c.cur === 3 || c.cur === 4) ? "> id" : "READY",
+      footer: "[A] ARM  [C] SEND  [B] BACK  POT=sel",
+    }); }
+  },
+  HID: {
+    h: `<div class="deck"></div>`,
+    t(win, s){ menuSim(win, s, {
+      title: "HID / KEY", head: c => "ARM:" + (c.arm >= 0 ? 1 : 0),
+      rows: ["BLE   (BadBLE)","USB   (HID)","BLE   (PERIPH)","APPLE (SPOOF)"],
+      armed: c => ["BLE HID ON","USB HID OK","BLE PERIPH","APPLE ON"][c.arm] + "  " + (c.n % 100) + "%",
+      status: () => "READY",
+      info: c => [{ t: "Script: Hello from Void-OS" }, ...(c.arm >= 0 ? [{ t: "TYPING " + (c.n % 100) + "% [" + (c.n % 23) + "/23]", cls: "warn" }] : [])],
+      footer: "[A] ARM/TOGGLE  [B] BACK  POT=mode",
+    }); }
+  },
+  DARK: {
+    h: `<div class="deck"></div>`,
+    t(win, s){ menuSim(win, s, {
+      title: "DARK / STEALTH", head: c => (c.arm >= 0 || c.n % 40 < 20 ? "STL:1" : "STL:0") + (c.n % 40 < 20 ? " OPS" : ""),
+      rows: ["WIFI (MAC/MODE)","BLE  (RPA/PASS)","NET  (DNS/TTL)","PHYS (LED/BL/HA)","OPS  (PER-OP)"],
+      suf: (i, c) => {
+        const on = (i === 4) ? (c.n % 40 < 20) : (c.n % 23 < 12 || c.arm === i);
+        return on ? "[ON]" : "[OFF]";
+      },
+      armed: () => "STEALTH+OPS",
+      status: c => (c.n % 40 < 20) ? "STEALTH" : "READY",
+      info: c => [{ t: "OPS rotates MAC every 60s · " + (60 - c.n % 60) + "s" }],
+      footer: "[A] TOGGLE ALL  [B] BACK  NOTE: OPS rotates MAC every 60s",
+    }); }
+  },
+  SCAN: {
+    h: `<div class="deck"></div>`,
+    t(win, s){ menuSim(win, s, {
+      title: "SCAN / RECON", head: () => "t:192.168.1.1",
+      rows: ["ARP HOSTS","TCP  PORTS","SERVICES","WIFI HOSTS"],
+      armed: c => ["ARP: " + (3 + c.n % 6) + " host","PORTS: " + (c.n % 24) + "/24","SERVICES","AP STA: " + (2 + c.n % 5)][c.arm],
+      status: () => "READY",
+      info: c => c.arm === 0 ? [{ t: "AA:BB:CC:DD:EE:FF  192.168.1.2", cls: "ok" }, { t: "11:22:33:44:55:66  192.168.1.8" }]
+              : c.arm === 1 ? [{ t: "22     OPEN", cls: "ok" }, { t: "80     OPEN" }, { t: "443    CLOSED" }]
+              : c.arm === 2 ? [{ t: "22 ssh   80 http  443 https" }, { t: "3306 mysql  8080 http-alt" }]
+              : c.arm === 3 ? [{ t: "D8:3A:DD:11:9C:22  192.168.1.5" }]
+              : [],
+      footer: "[A] RUN  [B] BACK  POT=row",
+    }); }
+  },
+  ROGUE: {
+    h: `<div class="deck"></div>`,
+    t(win, s){ menuSim(win, s, {
+      title: "ROGUE / EVILAP", head: c => "Void-OS ch" + (1 + c.n % 11),
+      rows: ["SOFTAP","CAPTIVE","DNS SPOOF","LOOT"],
+      suf: (i, c) => (c.arm === i || (i < 3 && c.n % 31 < 18)) ? "[ON]" : "[OFF]",
+      armed: () => "AP UP · " + (2 + c.n % 4) + " client",
+      status: () => "ARMED",
+      info: c => [{ t: "POST /login  [email bob+drop@evil.io  pass ****]", cls: "warn" }, { t: "→ loot/logins.csv" }],
+      footer: "[A] TOGGLE  [B] BACK  POT=row",
+    }); }
+  },
+  SNIFF: {
+    h: `<div class="deck"></div>`,
+    t(win, s){ menuSim(win, s, {
+      title: "SNIFF / URL", head: c => "PUMP:" + (c.arm >= 0 ? 1 : 0),
+      rows: ["URL LOG","COOKIES","MITM EN","REPLAY"],
+      armed: c => ["URLS: " + (c.n * 3 % 400),"COOKIES: " + (c.n % 60),"MITM ON","REPLAYED"][c.arm],
+      status: () => "READY",
+      info: c => [{ t: "GET /api/login  SESSIONID=" + (c.n * 7 % 0xffff).toString(16), cls: "ok" }, { t: "→ loot/urls.csv · ip_fwd" }],
+      footer: "[A] TOGGLE/EXTRACT  [B] BACK  POT=row",
+    }); }
+  },
+  FUZZ: {
+    h: `<div class="deck"></div>`,
+    t(win, s){ menuSim(win, s, {
+      title: "FUZZ / HTTP", head: c => "RUN:" + (c.arm >= 0 ? 1 : 0),
+      rows: ["TARGET","REPS","RUN"],
+      armed: () => "fuzz.. " + (c.n * 4 % 256) + "/256",
+      status: () => "READY",
+      info: c => c.arm === 0 ? [{ t: "[3/8] 192.168.1.1:80", cls: "ok" }, { t: "  127.0.0.1:80" }, { t: "  10.0.0.1:80" }, { t: "  localhost:8080" }]
+              : c.arm === 1 ? [{ t: "256 reps (tier 3/4)", cls: "ok" }, { t: "  16 · 64 · > 256 · 1024" }]
+              : [{ t: "128 / 256  -> loot/fuzz.csv" }, { t: "idx=128  /admin?u=1  200  47ms" }],
+      footer: "[A] RUN  [B] STOP  POT=row",
+    }); }
+  },
+  WEB: {
+    h: `<div class="deck"></div>`,
+    t(win, s){ menuSim(win, s, {
+      title: "WEB / SCRAPE",
+      rows: ["URL","GET","PARSE","LINKS"],
+      armed: c => ["GET https://example.com","FETCH 200 · " + (8 + c.n % 20) + "kB","TITLE: Example Domain",(2 + c.n % 6) + " anchors"][c.arm],
+      status: () => "READY",
+      info: c => c.arm >= 1 ? [{ t: "⟪ everything you post here is logged ⟫", cls: "warn" }, { t: "saved → loot/web_" + (1720000000 + c.n * 7) + ".html" }] : [],
+      footer: "[A] ACT  [B] BACK  POT=row",
+    }); }
+  },
+  BODY: {
+    h: `<div class="deck"></div>`,
+    t(win, s){
+      if (!s.c){ s.c = {n:0}; }
+      const c = s.c; c.n++;
+      const macs = ["A4:83:E7:2E:41:0F","D8:3A:DD:11:9C:22","78:11:DC:05:AB:77","5C:8A:FD:33:02:99","EC:35:26:7B:14:0D","B4:8D:43:91:3E:60"];
+      const vendors = ["Apple","Samsung","TP-Link","Sony","Raspberry Pi","ESP-Dev"];
+      const ssids = ["-","CoffeeShop","IoT-2.4","-","guest","-"];
+      const rows = macs.map((m, i) => ({
+        l: m + "  " + (2 + ((c.n + i * 5) % 9)) + "  " + vendors[i] + "  " + ssids[i],
+        cls: i === 0 ? "cur" : "",
+      }));
+      renderDeck(win, {
+        title: "BODY / PRESENCE", head: "ON:" + (c.n % 40 < 25 ? 1 : 0),
+        rows,
+        info: [{ t: "CPU 42%  MEM 61%  RX 1234kB" }, { t: "ring: " + (4 + c.n % 8) + "/64  ·  " + (c.n % 40 < 25 ? "sniffing" : "idle") }],
+        status: "probe rx · 60s window",
+        footer: "[A] ARM  [B] BACK  C=clear",
+      });
+    }
+  },
+  DROP: {
+    h: `<div class="deck"></div>`,
+    t(win, s){ menuSim(win, s, {
+      title: "DROP / USB", head: c => "USB:" + (c.arm === 3 ? "ON" : "off") + "  BLD:" + (c.n % 30 < 15 ? "OK" : "--"),
+      rows: ["TARGET","PAYLOAD","BUILD","DROP"],
+      suf: (i, c) => i === 0 ? " → WIN-AUTORUN" : i === 1 ? " [0/3]" : i === 3 && c.arm === 3 ? " [EJECT=C]" : "",
+      armed: c => ["BUILT: WIN-AUTORUN","PL[0/3]","READY","USB: ACTIVE"][c.arm],
+      status: () => "READY",
+      info: c => c.arm === 0 ? [{ t: "autorun.inf + payload.exe" }]
+              : c.arm === 1 ? [{ t: "#!/bin/bash" }, { t: "echo 'placeholder payload' > /tmp/drop_test.txt" }]
+              : [{ t: "template: WIN-AUTORUN" }],
+      onC: () => "EJECT: OK",
+      footer: "[A] SEL/TOG  [C] EJECT  [B] BACK  POT=row/scroll",
+    }); }
+  },
+  QR: {
+    h: `<div class="deck"></div>`,
+    key(win, s, k){
+      if (!s.c){ s.c = {cur:0, n:0, auto:true, show:false}; }
+      const c = s.c; c.auto = false;
+      if (k === "," || k === "ArrowUp")   c.cur = (c.cur + 2) % 3;
+      else if (k === "." || k === "ArrowDown") c.cur = (c.cur + 1) % 3;
+      else if (k === "a" || k === "A")    c.show = c.cur === 2 ? !c.show : true;
+      else if (k === "b" || k === "B")    { c.show = false; c.forced = "READY"; c.forcedLeft = 10; }
+      else if (k === "c" || k === "C")    { c.forced = "QR SAVED → /sd/qr.bmp"; c.forcedLeft = 10; }
+    },
+    t(win, s){
+      if (!s.c){ s.c = {cur:0, n:0, auto:true, show:false}; }
+      const c = s.c; c.n++;
+      if (c.forced && --c.forcedLeft <= 0) c.forced = null;
+      if (c.auto && c.n % 6 === 0) c.cur = (c.cur + 1) % 3;
+      const text = "https://evil.me/loot/" + (c.n % 7);
+      const show = c.show || (c.auto && c.n % 5 >= 3);
+      renderDeck(win, {
+        title: "QR / GEN",
+        rows: ["URL","GEN","SHOW"].map((l, i) => ({ l, cls: i === c.cur ? "cur" : "" })),
+        info: show
+          ? [{ t: `<canvas class="qr" width="120" height="120" style="width:96px;height:96px"></canvas>`, cls: "dk-qr" }, { t: "bitmap → /sd/qr.bmp" }]
+          : [{ t: "https://evil.me/loot/" + (c.n % 7), cls: "ok" }, { t: "v2 · ECC M · 25 modules" }],
+        status: c.forced || "GEN OK · scannable",
+        footer: "[A] ACT  [B] BACK  POT=row",
+      });
+      const cv = win.querySelector(".deck canvas.qr");
+      if (cv){
+        const g = cv.getContext("2d");
+        g.fillStyle = "#fff"; g.fillRect(0, 0, cv.width, cv.height);
+        try {
+          const m = makeQR(text);
+          const size = m.length, cell = Math.floor(cv.width / (size + 8)), off = cell * 4;
+          g.fillStyle = "#000";
+          for (let y = 0; y < size; y++) for (let x = 0; x < size; x++)
+            if (m[y][x]) g.fillRect(off + x * cell, off + y * cell, cell, cell);
+        } catch(e){}
+      }
+    }
+  },
+  LEAK: {
+    h: `<div class="deck"></div>`,
+    t(win, s){ menuSim(win, s, {
+      title: "LEAK / SCANNER", head: () => "SCAN HASH BREACH",
+      rows: ["SCAN","HASH","BREACH","SETTINGS"],
+      armed: c => ["SCAN: " + (c.n % 9) + " hit(s) -> loot/leaks.csv","CRACKED: hunter2","HIBP: " + (c.n % 20) + " exposures","mode:SHA1 wl:(default)"][c.arm],
+      status: () => "READY",
+      info: c => [{ t: "grep -rIE over loot", cls: "ok" }, { t: "pattern: api_key|secret|AKIA|ghp_|sk-|Bearer" }],
+      footer: "[A] RUN  [B] BACK  POT=row",
+    }); }
+  },
+  MARAUD: {
+    h: `<div class="deck"></div>`,
+    t(win, s){ menuSim(win, s, {
+      title: "MARAUDER",
+      rows: ["PWND","BEACON","DEAUTH","SCOUT"],
+      suf: (i, c) => ["  " + (c.n * 2 % 60) + " pwnd","  " + (c.n % 40) + " ssid","  " + (c.n % 25) + " deauth","  ch " + (6 + c.n % 6)][i],
+      armed: c => ["PWND: " + (c.n * 2 % 60),"BEACON: " + (c.n % 40) + " ssid","DEAUTH: " + (c.n % 25),"SCOUT: sniffing"][c.arm],
+      status: () => "READY",
+      info: c => c.arm >= 0 ? [{ t: "[DEAUTH] " + (c.n % 25) + " → AP 9C:5C:8E:11", cls: "warn" }] : [],
+      onC: () => "STOPPED",
+      footer: "[A] ARM/INJ  [C] STOP  [B] BACK",
+    }); }
+  },
+  OSINT: {
+    h: `<div class="deck"></div>`,
+    t(win, s){ menuSim(win, s, {
+      title: "OSINT",
+      rows: ["WHOIS","DNS","SUBDOM","GEO","DOCK"],
+      armed: c => ["whois returns org=Example RDNS","dig A example.com → 93.184.216.34","5 subdomains found","geo: 37.751, -97.822 (US)","subdomain brute…"][c.arm],
+      status: () => "READY",
+      info: c => [{ t: "target: example.com", cls: "ok" }, { t: c.arm >= 0 ? "bg tool: " + ["whois","dig","dnsrecon","ipgeolocation","sublist3r"][c.arm] : "idle" }],
+      footer: "[A] RUN  [B] BACK  POT=row",
+    }); }
+  },
+  HARDEN: {
+    h: `<div class="deck"></div>`,
+    t(win, s){ menuSim(win, s, {
+      title: "HARDEN / DEFEND",
+      rows: ["UFW","FAIL2BAN","ROOTKIT","LYNIS","UPDATE"],
+      suf: i => [" active"," running"," idle",""," pending"][i],
+      armed: c => ["UFW: active","fail2ban: running","rootkit: scan clean","lynis: 47 tips · 2 medium","apt update: 0 to upgrade"][c.arm],
+      status: () => "READY",
+      info: c => [{ t: "last audit: " + (c.n * 3 % 60) + "s ago" }],
+      footer: "[A] ACT  [B] BACK  POT=row",
+    }); }
+  },
+};
+
+function mountSim(app, win){
+  const sim = SIM[app.name];
+  if (!sim){ win.querySelector(".sim").innerHTML =
+    `<div class="placeholder"><div class="ph-top">◈ ── WEB UI PENDING ── ◈</div>
+       <span class="ph-glyph">${app.glyph}</span>window queued next.<br>
+       <div class="ph-sub">gauges above stay live</div></div>`; return; }
+  win.querySelector(".sim").innerHTML = sim.h;
+}
+
+let simT = 0;
+function simTick(){
+  simT += 0.5;
+  for (const name of Object.keys(wins)){
+    const sim = SIM[name];
+    if (!sim) continue;
+    const win = wins[name];
+    if (!win.__s) win.__s = {};
+    try { sim.t(win, win.__s); } catch(e){
+      appendLog("[sim] " + name + " error: " + (e && e.message || e));
+      delete SIM[name];
+    }
+  }
+}
+
+// ── live stats + serial log (WebSocket or HTTP fallback) ────────────────
+const DUMMY_STATS = { cpu: 42, mem: 61, sd: 33, bat: 87 };
+let liveStats = null;
+
+function parseStats(t){
+  // harness broadcasts "STATS cpu=42 mem=61 sd=33 rx=1234"
+  const m = t.match(/cpu=(\d+) mem=(\d+) sd=(\d+) rx=(\d+)/);
+  if (!m) return;
+  liveStats = { cpu: +m[1], mem: +m[2], sd: +m[3], rx: +m[4], bat: 87 };
+  statsEl.textContent = "cpu=" + m[1] + "% mem=" + m[2] + "% sd=" + m[3] + "% rx=" + m[4] + "kB";
+  updateAllStats();
+}
+
+function fillStats(win){
+  const s = liveStats || DUMMY_STATS;
+  const set = (sel, v) => {
+    const f = win.querySelector('.g-fill[data-val="' + sel + '"]');
+    const t = win.querySelector(".gv-" + sel);
+    if (f) f.style.width = v + "%";
+    if (t) t.textContent = v + "%";
+  };
+  set("cpu", s.cpu); set("mem", s.mem); set("sd", s.sd); set("bat", s.bat);
+}
+function updateAllStats(){ for (const w of Object.values(wins)) fillStats(w); }
+
+// HTTP polling fallback (used when the WebSocket is blocked): log + stats
+// via /poll, input via /cmd.
+let logSince = 0;
+async function httpPollLog(){
+  try {
+    const resp = await fetch("/poll?since=" + logSince, {cache: "no-store"});
+    const j = await resp.json();
+    logSince = j.since;
+    if (j.stats){ parseStats(j.stats); }
+    if (j.device_alive === false){
+      setStatus(false, "device exited (code " + j.device_exit + ") — restart it");
+    } else if (j.device_alive === true && !liveStats){
+      setStatus(true, "http mode · device running");
+    }
+    for (const ln of j.lines){
+      if (ln.startsWith("STATS ")){ parseStats(ln); continue; }
+      appendLog(ln);
+    }
+  } catch(e){}
+}
+
+let reconnectDelay = 500;
+function startHttp(reason){
+  if (pollIv) return;                 // already polling
+  httpMode = true;
+  setStatus(true, reason || "http polling");
+  pollIv = setInterval(httpPollLog, 1200);
+  httpPollLog();
+}
+function stopHttp(){
+  if (pollIv){ clearInterval(pollIv); pollIv = null; }
+  httpMode = false;
+}
+function updateModeBtn(){
+  document.getElementById("modebtn").textContent =
+    transport === "http" ? "link:http" : (httpMode ? "link:http" : "link:ws");
+}
+document.getElementById("modebtn").onclick = ()=>{
+  if (transport !== "http"){            // auto/ws -> force http
+    transport = "http"; stopHttp(); if (ws) ws.close(); startHttp("http forced");
+  } else {                              // http -> back to auto ws
+    transport = "auto"; stopHttp(); if (ws) ws.close(); connect();
+  }
+  updateModeBtn();
+};
+
+function connect(){
+  if (transport === "http"){ startHttp("http mode (?http)"); updateModeBtn(); return; }
+  const s = new WebSocket((location.protocol==="https:"?"wss://":"ws://")+location.host+"/ws");
+  ws = s;
+  s.binaryType = "blob";
+  // if the socket hasn't opened within 4 s, assume WebSockets are blocked
+  // (e.g. Brave Shields) and fall back to plain-HTTP polling.
+  const fb = setTimeout(()=>{
+    if (httpMode || (s && s.readyState === 1)) return;
+    appendLog("[ws] not connecting — switching to http polling", "warn");
+    stopHttp();
+    startHttp("http mode (ws blocked)");
+  }, 4000);
+  s.onopen = ()=>{
+    clearTimeout(fb);
+    reconnectDelay = 500;
+    stopHttp();
+    setStatus(true, "connected · ws");
+    updateModeBtn();
+    appendLog("[ws] opened");
+  };
+  s.onerror = ()=>{
+    if (httpMode) return;
+    appendLog("[ws] error — will retry", "warn");
+    setStatus(false, "ws error — reconnecting");
+  };
+  s.onclose = (ev)=>{
+    if (httpMode) return;
+    setStatus(false, "disconnected (code " + ev.code + ")");
+    appendLog("[ws] closed (code " + ev.code + ") — reconnecting", "warn");
+    setTimeout(connect, reconnectDelay);
+    reconnectDelay = Math.min(reconnectDelay * 2, 5000);
+  };
+  s.onmessage = (ev)=>{
+    if (ev.data instanceof Blob || ev.data instanceof ArrayBuffer){
+      return;                       // device frames aren't painted anymore
+    }
+    const t = String(ev.data);
+    if (t === "__STOPPED__"){ setStatus(false, "firmware exited — restart it"); return; }
+    if (t.startsWith("STATS ")){ parseStats(t); return; }
+    appendLog(t);
+  };
+}
+
+window.addEventListener("error", (e)=>{
+  appendLog("[js error] " + (e.message || String(e.error || "?")), "err");
+  setStatus(false, "js error — see serial log");
+});
+
+function appendLog(t, cls){
+  const el = document.createElement("div");
+  el.textContent = t;
+  if (cls) el.className = "ln-" + cls;
+  logEl.appendChild(el);
+  while (logEl.children.length > 400) logEl.removeChild(logEl.firstChild);
+  logEl.scrollTop = logEl.scrollHeight;
+  // surface the freshest device line in the top ticker
+  if (!t.startsWith("STATS ") && t !== "__STOPPED__"){
+    tickerEl.textContent = t.replace(/\s+/g, " ").slice(0, 110);
+  }
+}
+
+document.getElementById("logbtn").onclick = ()=> logEl.classList.toggle("open");
+document.getElementById("restart").onclick = ()=> send("\x1bRESTART");
+
+// ── keyboard — forwarded straight to the device ──────────────────────────
+window.addEventListener("keydown", (e)=>{
+  const k = e.key;
+  if (k === "Escape"){
+    const names = Object.keys(wins);
+    if (names.length) closeWindow(names[names.length - 1]);
+    return;
+  }
+  if ("abcABC.,0123456789q".includes(k)) { e.preventDefault(); send(k); deckKey(k); }
+  else if (k === "ArrowUp")   { e.preventDefault(); send(","); deckKey(","); }
+  else if (k === "ArrowDown") { e.preventDefault(); send("."); deckKey("."); }
+});
+
+// ── the character: procedural 8-tooth gear head + centre eye + dome body ─
+const charCanvas = document.getElementById("char");
+const gctx = charCanvas.getContext("2d");
+const CW = charCanvas.width, CH = charCanvas.height;   // 480 x 620
+const GEAR_CX = CW / 2, GEAR_CY = 330;                 // gear head centre
+const GEAR_TEETH = 8;                                  // procedural gear drawn ABOVE the eye
+const GR_TIP  = 198;                                   // tooth tips radius
+const GR_ROOT = 176;                                   // tooth root / ring outer radius
+const GR_HOLE = 50;                                    // hub hole — smaller than the eye, so the gear overlaps it
+const BODY_RX = 140, BODY_RY = 120, BODY_TOP = 536;    // body: half-ellipse, stretched from the flat edge
+const SCLERA = 62;                                     // white sclera radius
+const ER = 30;                                         // pupil radius (tracks the cursor)
+let mouse = {x: innerWidth / 2, y: innerHeight / 2};
+let pupil = {x: 0, y: 0};
+
+function rr(x, y, w, h, r){
+  gctx.beginPath();
+  if (gctx.roundRect) gctx.roundRect(x, y, w, h, r);
+  else gctx.rect(x, y, w, h);
+  gctx.fill();
+}
+
+function drawCharacter(now){
+  gctx.clearRect(0, 0, CW, CH);
+
+  // soft ground shadow
+  gctx.fillStyle = "rgba(0,0,0,.4)";
+  gctx.beginPath();
+  gctx.ellipse(GEAR_CX, BODY_TOP + BODY_RY - 6, BODY_RX * 0.95, 12, 0, 0, Math.PI * 2);
+  gctx.fill();
+
+  // body: half-ellipse bowl (flat top, dome down) with chest panel + LEDs.
+  // Stretched away from the flat edge so it reads as a body, not a squat
+  // bowl; the flat top tucks behind the gear head.
+  const bodyGrad = gctx.createLinearGradient(0, BODY_TOP, 0, BODY_TOP + BODY_RY * 2);
+  bodyGrad.addColorStop(0, "#141b26");
+  bodyGrad.addColorStop(1, "#0c1119");
+  gctx.fillStyle = bodyGrad;
+  gctx.beginPath(); gctx.ellipse(GEAR_CX, BODY_TOP, BODY_RX, BODY_RY, 0, 0, Math.PI); gctx.closePath(); gctx.fill();
+  gctx.strokeStyle = "#33404f"; gctx.lineWidth = 2;
+  gctx.beginPath(); gctx.ellipse(GEAR_CX, BODY_TOP, BODY_RX, BODY_RY, 0, 0, Math.PI); gctx.closePath(); gctx.stroke();
+  // chest display panel (on the visible curve below the head)
+  const px = GEAR_CX - 55, py = 590, pw = 110, ph = 32;
+  gctx.fillStyle = "#0a0e15";
+  rr(px, py, pw, ph, 5);
+  gctx.strokeStyle = "#33404f"; gctx.lineWidth = 1.5;
+  gctx.beginPath();
+  if (gctx.roundRect) gctx.roundRect(px, py, pw, ph, 5);
+  else gctx.rect(px, py, pw, ph);
+  gctx.stroke();
+  // pulsing LED (green) + steady amber
+  const pulse = 0.6 + 0.4 * Math.sin(now / 300);
+  gctx.fillStyle = "rgba(65,230,166," + (0.35 + 0.6 * pulse) + ")";
+  gctx.beginPath(); gctx.arc(px + 14, py + ph / 2, 4.5, 0, Math.PI * 2); gctx.fill();
+  gctx.fillStyle = "rgba(255,180,84,.8)";
+  gctx.beginPath(); gctx.arc(px + 28, py + ph / 2, 4.5, 0, Math.PI * 2); gctx.fill();
+  gctx.fillStyle = "rgba(255,180,84,.15)";
+  gctx.beginPath(); gctx.arc(px + 28, py + ph / 2, 9, 0, Math.PI * 2); gctx.fill();
+  gctx.fillStyle = "#5d6b7d"; gctx.font = "10px ui-monospace, monospace";
+  gctx.textAlign = "left"; gctx.textBaseline = "middle";
+  gctx.fillText("V·OID READY", px + 40, py + ph / 2 + 0.5);
+
+  // eye — white sclera + phosphor-green pupil, drawn BELOW the gear so
+  // the gear body visibly overlaps it; the pupil still tracks the cursor
+  // and shows through the gear's hub hole (r=GR_HOLE).
+  gctx.fillStyle = "#dce6ef";
+  gctx.beginPath(); gctx.arc(GEAR_CX, GEAR_CY, SCLERA, 0, Math.PI * 2); gctx.fill();
+  const rect = charCanvas.getBoundingClientRect();
+  const cxs = rect.left + rect.width / 2, cys = rect.top + rect.height / 2;
+  let dx = mouse.x - cxs, dy = mouse.y - cys;
+  const dist = Math.hypot(dx, dy) || 1;
+  const maxOff = SCLERA - ER - 2;
+  const tx = (dx / dist) * Math.min(dist * 0.12, maxOff);
+  const ty = (dy / dist) * Math.min(dist * 0.12, maxOff);
+  pupil.x += (tx - pupil.x) * 0.18;
+  pupil.y += (ty - pupil.y) * 0.18;
+  gctx.fillStyle = "#41e6a6";                       // phosphor-green iris
+  gctx.beginPath(); gctx.arc(GEAR_CX + pupil.x, GEAR_CY + pupil.y, ER, 0, Math.PI * 2); gctx.fill();
+  gctx.fillStyle = "#0b1016";
+  gctx.beginPath(); gctx.arc(GEAR_CX + pupil.x, GEAR_CY + pupil.y, ER * 0.34, 0, Math.PI * 2); gctx.fill();
+
+  // gear head — procedural 8-tooth gear drawn ABOVE the eye so the gear
+  // body visibly overlaps it; the pupil shows through the hub hole.
+  gctx.fillStyle = "#2b3746";
+  for (let i = 0; i < GEAR_TEETH; i++){
+    const a = i * Math.PI / 4;
+    gctx.save();
+    gctx.translate(GEAR_CX, GEAR_CY);
+    gctx.rotate(a);
+    rr(-23, -GR_TIP, 46, GR_TIP - GR_ROOT + 10, 4);   // tooth: r = GR_ROOT-10 .. GR_TIP
+    gctx.restore();
+  }
+  gctx.beginPath();
+  gctx.arc(GEAR_CX, GEAR_CY, GR_ROOT, 0, Math.PI * 2);
+  gctx.arc(GEAR_CX, GEAR_CY, GR_HOLE, 0, Math.PI * 2, true);
+  gctx.fill();
+  gctx.strokeStyle = "#46576b"; gctx.lineWidth = 2.5;
+  gctx.beginPath(); gctx.arc(GEAR_CX, GEAR_CY, GR_ROOT, 0, Math.PI * 2); gctx.stroke();
+  gctx.strokeStyle = "rgba(65,230,166,.4)";
+  gctx.beginPath(); gctx.arc(GEAR_CX, GEAR_CY, GR_HOLE, 0, Math.PI * 2); gctx.stroke();
+}
+
+window.addEventListener("pointermove", e=>{ mouse.x = e.clientX; mouse.y = e.clientY; });
+(function tick(t){ drawCharacter(t); requestAnimationFrame(tick); })(performance.now());
+
+// ── CRT boot sequence ──────────────────────────────────────────────
+const BOOT_LINES = [
+  ["VOID-CYBERDECK BIOS", "v2.6.1 · 240×320", "head"],
+  ["CPU",   "RPi5 quad aarch64 2.4GHz", "ok"],
+  ["MEM",   "8192MB LPDDR4", "ok"],
+  ["SD",    "32GB eMMC", "ok"],
+  ["NFC",   "PN532 module", "ok"],
+  ["RADIO", "CC1101 sub-ghz", "ok"],
+  ["IR",    "TSOP4838", "ok"],
+  ["HID",   "usb-hid stack", "ok"],
+  ["DISP",  "ILI9341 @ 60fps", "ok"],
+  ["WIFI",  "scanning bands", "warn"],
+  ["LINK",  "awaiting device", "wait"],
+];
+
+function padStr(s, n){ s = String(s); while (s.length < n) s += " "; return s; }
+
+function bootLineHTML(name, value, status){
+  if (status === "head"){
+    return '<span class="b-head">' + name + "</span> <span class='b-dot'>" + value + "</span>";
+  }
+  const dot = (status === "ok") ? '<span class="b-ok"> OK</span>'
+             : (status === "warn") ? '<span class="b-warn"> WARN</span>'
+             : '<span class="b-blink"> ...</span>';
+  return padStr(name, 16) + padStr(value, 32) +
+         '<span class="b-dot">.....</span>' + dot;
+}
+
+function runBoot(){
+  const boot = document.getElementById("boot");
+  const box  = document.getElementById("boot-log");
+  const bar  = document.getElementById("boot-bar");
+  const stat = document.getElementById("boot-status");
+  let done = false;
+
+  function finish(){
+    if (done) return;
+    done = true;
+    boot.classList.add("fade");
+    setTimeout(()=> boot.remove(), 480);
+    window.removeEventListener("keydown", skip, true);
+    boot.removeEventListener("pointerdown", skip);
+  }
+  function skip(e){
+    // capture phase: consume the key so it never reaches the device
+    e.stopPropagation();
+    e.preventDefault();
+    finish();
+  }
+  window.addEventListener("keydown", skip, true);
+  boot.addEventListener("pointerdown", skip);
+
+  const lines = BOOT_LINES.slice();
+  function addLine(){
+    if (!lines.length){ startBar(); return; }
+    const [n, v, s] = lines.shift();
+    const el = document.createElement("div");
+    el.className = "b-line";
+    el.innerHTML = bootLineHTML(n, v, s);
+    box.appendChild(el);
+    if (s === "warn") stat.textContent = "WARN · " + n;
+    setTimeout(addLine, s === "head" ? 100 : 150);
+  }
+  function startBar(){
+    let p = 0;
+    stat.textContent = "SYSTEM START · 0%";
+    const iv = setInterval(()=>{
+      p = Math.min(100, p + 2 + Math.random() * 5);
+      bar.style.width = p + "%";
+      stat.textContent = "SYSTEM START · " + Math.round(p) + "%";
+      if (p >= 100){
+        clearInterval(iv);
+        const el = document.createElement("div");
+        el.className = "b-line";
+        el.innerHTML = '<span class="b-ok">VOID-OS READY — entering desktop</span>';
+        box.appendChild(el);
+        stat.textContent = "READY";
+        setTimeout(finish, 3340);   // +3s hold before entering the desktop
+      }
+    }, 28);
+  }
+  setTimeout(addLine, 240);   // brief power-on delay
+}
+runBoot();
+
+updateModeBtn();
+connect();   // opens WebSocket, or goes straight to HTTP when ?http is set
+setInterval(simTick, 500);   // animate open app windows
+
+// one-shot self-check: report the device link state so the log drawer
+// alone explains any missing stats.
+setTimeout(async ()=>{
+  try {
+    const pl = await fetch("/poll?since=0", {cache: "no-store"});
+    const j = await pl.json();
+    const wsState = ws ? (ws.readyState === 1 ? "open" : ws.readyState === 0 ? "connecting" : "closed") : "none";
+    appendLog("[diag] ws=" + wsState
+      + " poll_lines=" + j.lines.length
+      + " stats=" + (j.stats || "none")
+      + " device_alive=" + j.device_alive);
+  } catch(e){ appendLog("[diag] self-check failed: " + e, "err"); }
+}, 600);
+</script>
+</body>
+</html>

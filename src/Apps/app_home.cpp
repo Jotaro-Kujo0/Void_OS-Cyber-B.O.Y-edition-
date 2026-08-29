@@ -25,29 +25,35 @@ static const float EYE[APP_COUNT][2] = {
     {-0.45f,-0.45f},                                //  7 SYS
     { 0.45f,-0.45f},                                // 10 DARK
     { 0.0f,  -0.95f},                               // 19 QR   (centre bottom)
+    {-0.2f, -0.95f},                               // 20 LEAK (bottom-centre-left)
+    {  0.2f, -0.95f},                               // 21 MARAUD (bottom-centre-right)
+    {  0.0f,  0.95f},                               // 22 OSINT (centre top)
+    {  0.0f,  0.75f},                               // 23 HARDEN (centre top, below OSINT)
 };
 
 static const char* NAMES[APP_COUNT] = {
     "HOME","STAT","WIFI","LOG","RADIO","NFC","IR","SYS","BUS","HID","DARK",
-    "SCAN","ROGUE","SNIFF","FUZZ","WEB","BODY","HELP","DROP","QR"
+    "SCAN","ROGUE","SNIFF","FUZZ","WEB","BODY","HELP","DROP","QR",
+    "LEAK","MARAUD","OSINT","HARDEN"
 };
 static const char* DESCS[APP_COUNT] = {
     "","vitals","wifi/ble","logger","sub-ghz","rfid","infrared","system",
     "cable","badble","stealth",
     "recon","evilap","urllog","fuzzer","scrape","bodies",
-    "cheat","usb","gen"
+    "cheat","usb","gen","leaks","maraud","osint","defend"
 };
 static const float FILLS[APP_COUNT] = {
     0,0.87f,0.6f,0.45f,0.72f,0.5f,0.3f,1.0f,
     0.4f,0.55f,0.2f,0.6f,0.7f,0.5f,0.6f,0.5f,
-    0.5f,0.8f,0.4f,0.7f
+    0.5f,0.8f,0.4f,0.7f,0.6f,0.65f,0.7f,0.35f
 };
 static const AnimID ANIMS[APP_COUNT] = {
     ANIM_IDLE, ANIM_HAPPY, ANIM_CURIOUS, ANIM_TIRED,
     ANIM_FOCUS, ANIM_FOCUS, ANIM_ALERT, ANIM_IDLE,
     ANIM_FOCUS, ANIM_ALERT, ANIM_TIRED, ANIM_CURIOUS,
     ANIM_ALERT, ANIM_FOCUS, ANIM_TIRED, ANIM_CURIOUS,
-    ANIM_FOCUS, ANIM_HAPPY, ANIM_ALERT, ANIM_CURIOUS
+    ANIM_FOCUS, ANIM_HAPPY, ANIM_ALERT, ANIM_CURIOUS,
+    ANIM_CURIOUS, ANIM_ALERT, ANIM_FOCUS, ANIM_IDLE
 };
 
 static uint8_t pot_to_app(uint8_t p) {
@@ -108,15 +114,9 @@ void app_home_draw() {
     draw_fill(0, 0, SCR_W, SCR_H, T_BG);
     draw_statsbar();
 
-    // 8 rows so the enlarged catalogue fits in the visible grid (16
-    // tile positions + 2 strip slots). Tile row height drops to 30 px
-    // so the SYS strip and the bottom hint both fit.
-    // Left panel:  STAT(1)  WIFI(2)  LOG(3)  BUS(8)  SCAN(11)  SNIFF(13)  WEB(15)  HELP(17)
-    const uint8_t LA[] = {1, 2, 3, 8, 11, 13, 15, 17};
-    // Right panel: RADIO(4) NFC(5) IR(6)  HID(9)  ROGUE(12) FUZZ(14)  BODY(16)  DROP(18)
-    const uint8_t RA[] = {4, 5, 6, 9, 12, 14, 16, 18};
-    // Strip: SYS(7), DARK(10), and QR(19) share the bottom strip with
-    // the SYS+DARK combo taking the top and QR dropping to the right.
+    // 30px rows keep all 24 apps on one screen.
+    const uint8_t LA[] = {1, 2, 3, 8, 11, 13, 15, 17};   // left panel
+    const uint8_t RA[] = {4, 5, 6, 9, 12, 14, 16, 18};   // right panel
     const int PANEL_ROWS = 8;
     const int row_h = 30;
     for (int i = 0; i < PANEL_ROWS; ++i)
@@ -128,10 +128,9 @@ void app_home_draw() {
         draw_panel_row(RIGHT_X, STATS_H + i * row_h, PANEL_W, row_h,
                        RA[i], _sel == RA[i], true);
 
-    // SYS row (7) — full-width strip just above the hint.
+    // SYS strip w/ DARK on the right, just above the hint.
     int y = STATS_H + PANEL_ROWS * row_h;
     draw_fill(0, y, SCR_W, 24, T_SEL_BG);
-    // Highlight row using the focused tile boundary.
     const bool dark_focused = _sel == APP_DARK;
     draw_rect(0, y, SCR_W, 24, _sel == 7 ? T_FG : dark_focused ? T_FG : T_BORDER);
     draw_textf(8, y + 6, _sel == 7 ? T_FG : T_DIM, T_SEL_BG, FONT_SM,
@@ -144,8 +143,7 @@ void app_home_draw() {
                T_SEL_BG, FONT_SM,
                dark_focused ? ">DARK" : "DARK");
 
-    // Center OC
-    character_draw(&_char);
+    character_draw(&_char);   // center OC
 
     // Bottom hint
     draw_hline(0, SCR_H - 16, SCR_W, T_BORDER);

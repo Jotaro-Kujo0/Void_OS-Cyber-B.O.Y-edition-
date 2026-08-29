@@ -27,13 +27,27 @@
 #include <SD.h>
 #endif
 
+// Pure computation, target-agnostic so it can be unit-tested with
+// captured du/find + statvfs output. fs_pct is the share of the volume's
+// bytes that are used, clamped to 0..100.
+LootStats hal_loot_stats_from(uint32_t files_count, uint32_t bytes_written,
+                              uint64_t fs_total, uint64_t fs_free) {
+    LootStats s{};
+    s.files_count    = files_count;
+    s.bytes_written  = bytes_written;
+    uint64_t used    = (fs_total > fs_free) ? (fs_total - fs_free) : 0;
+    s.fs_pct         = (uint8_t)((100 * used) / (fs_total ? fs_total : 1));
+    if (s.fs_pct > 100) s.fs_pct = 100;   // clamp rounding/measurement noise
+    return s;
+}
+
 // ── Path building ──────────────────────────────────────────────────────
 
 #ifdef VOIDOS_RPI5
-static const char *ROOT = "/var/lib/void-os/loot";
+static const char *ROOT = VOIDOS_LOOT_ROOT;
 static bool _available = false;
 #else
-static const char *ROOT = "/loot";
+static const char *ROOT = VOIDOS_LOOT_ROOT;
 #endif
 
 size_t hal_loot_path(char *out, size_t out_len, const char *tag) {
@@ -117,32 +131,47 @@ void hal_loot_flush() {
 // ── Stats ───────────────────────────────────────────────────────────────
 
 LootStats hal_loot_stats() {
-    LootStats s{}; s.files_count = 0; s.bytes_written = 0; s.fs_pct = 0;
+    // Gather raw figures below, then hand off to the pure computation.
+    uint32_t files_count   = 0;
+    uint32_t bytes_written = 0;
+    uint64_t fs_total      = 0;
+    uint64_t fs_free       = 0;
+
 #ifdef VOIDOS_RPI5
-    // sum file sizes under ROOT.
-    struct stat st{};
-    if (::stat(ROOT, &st) == 0 && S_ISDIR(st.st_mode)) {
-        // ponytail: not enumerating today — fixed-cost approximation.
-        // Use `du` shell-out: `du -sb /var/lib/void-os/loot`.
-        char cmd[80]; std::snprintf(cmd, sizeof(cmd),
-                                    "du -sb %s 2>/dev/null | awk '{print $1}'", ROOT);
+    // Fixed-cost approximations via shell-out rather than directory
+    // enumeration: `du -sb` for bytes, `find | wc -l` for the file count,
+    // `statvfs` for the volume totals. Same pattern as hal_usb_msc_stats.
+    {
+        char cmd[96];
+        std::snprintf(cmd, sizeof(cmd),
+                      "du -sb %s 2>/dev/null | awk '{print $1}'", ROOT);
         FILE *p = ::popen(cmd, "r");
         if (p) {
             uint64_t v = 0;
-            int got = std::fscanf(p, "%lu", &v);
+            if (std::fscanf(p, "%lu", &v) == 1) bytes_written = (uint32_t)v;
             ::pclose(p);
-            if (got == 1) s.bytes_written = (uint32_t)v;
         }
-        struct statvfs sv{};
-        if (::statvfs(ROOT, &sv) == 0) {
-            uint64_t size  = (uint64_t)sv.f_blocks * sv.f_frsize;
-            uint64_t free  = (uint64_t)sv.f_bavail * sv.f_frsize;
-            s.fs_pct = (uint8_t)((100 * (size - free)) / (size ? size : 1));
+    }
+    {
+        char cmd[96];
+        std::snprintf(cmd, sizeof(cmd),
+                      "find %s -type f 2>/dev/null | wc -l", ROOT);
+        FILE *q = ::popen(cmd, "r");
+        if (q) {
+            uint64_t n = 0;
+            if (std::fscanf(q, "%lu", &n) == 1) files_count = (uint32_t)n;
+            ::pclose(q);
         }
-        s.files_count = 1; // approximate
+    }
+
+    struct statvfs sv{};
+    if (::statvfs(ROOT, &sv) == 0) {
+        fs_total = (uint64_t)sv.f_blocks * sv.f_frsize;
+        fs_free  = (uint64_t)sv.f_bavail * sv.f_frsize;
     }
 #else
     // ESP32 — SD library files enumeration requires manual open. Skeleton.
 #endif
-    return s;
+
+    return hal_loot_stats_from(files_count, bytes_written, fs_total, fs_free);
 }

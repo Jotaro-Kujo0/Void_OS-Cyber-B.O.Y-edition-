@@ -1,15 +1,5 @@
-// app_body.h — slot APP_BODY: passive Wi-Fi presence tracker (Pi 5)
-//
-// Captures 802.11 Probe Requests via tcpdump pipe, extracts MAC + SSID,
-// and maintains a ring buffer of observed devices with OUI vendor lookup.
-//
-// Sub-modes:
-//   0. SNIFF  — toggle probe-request capture on/off
-//   1. LIST   — top entries sorted by probe count
-//   2. VENDOR — OUI prefix lookup for selected entry
-//   3. CLEAR  — wipe the ring buffer
-//
-// Cross-app: app_home status bar calls app_body_visible_count().
+// app_body.h — passive Wi-Fi presence tracker via tcpdump pipe.
+// SNIFF / LIST / VENDOR / CLEAR probe requests + OUI lookup.
 
 #pragma once
 #include "os/events.h"

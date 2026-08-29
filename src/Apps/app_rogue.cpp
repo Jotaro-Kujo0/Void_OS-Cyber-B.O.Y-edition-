@@ -1,13 +1,6 @@
 // app_rogue.cpp — soft AP, captive portal, DNS spoof, loot viewer.
-//
-// Sub-modes:
-//   0. SOFTAP    — toggle WiFi soft AP; SSID from `rogue_ssid`, channel
-//                  from `rogue_chan`. Pi 5 path: `nmcli device wifi hotspot`
-//                  which Bookworm NetworkManager supports first-class.
-//                  ESP32: Arduino `WiFi.softAP` baked into ESP32 Arduino core.
-//   1. CAPTIVE   — start captive HTTP frontend. Pi 5 spawns a child
-//                  `python3 -m http.server --directory ...portal`. ESP32 uses
-//                  `WebServer` (also in the ESP32 Arduino core).
+// SOFTAP via nmcli hotspot (Pi5) / WiFi.softAP (ESP32); CAPTIVE via
+// python http.server / WebServer.
 //   2. DNS SPOOF — UDP/53 listener that returns AP IP for every A query.
 //                  Pi 5: `dnsmasq --address=/#/...`. ESP32: `DNSServer`.
 //   3. LOOT      — read-only viewer; last 8 captured login rows.

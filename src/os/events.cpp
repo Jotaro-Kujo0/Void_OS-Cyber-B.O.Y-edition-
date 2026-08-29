@@ -9,7 +9,7 @@ static uint8_t _count = 0;
 void events_init() { _h = 0; _t = 0; _count = 0; }
 
 void events_push(Event e) {
-    // Drop the oldest event when the producer outruns the UI task.
+    // Drop oldest on overflow.
     if (_count == EVENT_BUF_SIZE) {
         _h = static_cast<uint8_t>((_h + 1) % EVENT_BUF_SIZE);
         --_count;

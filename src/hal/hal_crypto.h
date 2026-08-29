@@ -1,24 +1,7 @@
-// hal_crypto.h — at-rest encryption for loot.
-//
-// The captured loot directory contains login credentials, cookies,
-// and URLs that smoke-gun the device's owner if the SD card pops.
-// This module provides real at-rest encryption (AES-256-CBC) with a
-// passphrase-derived key. On the Raspberry Pi / Linux target it is
-// backed by OpenSSL libcrypto; the ESP32 target has no vetted
-// primitive wired in yet and reports unavailable (returns false)
-// instead of claiming success.
-//
-// FILE FORMAT (matches the documented layout):
-//
-//      SIG 4 bytes "VOS1"
-//      SALT 16 bytes
-//      IV   16 bytes
-//      CIPHERTEXT (multiple of 16 bytes)
-//      HMAC 32 bytes (SHA256 over SIG+SALT+IV+CIPHERTEXT)
-//
-// Encrypting a file produces a sibling "<name>.vos1" and removes the
-// plaintext once the ciphertext is durably written, so no plaintext
-// lingers on disk.
+// hal_crypto.h — AES-256-CBC at-rest loot encryption.
+// Deletes plaintext after writing "<name>.vos1" (only when OpenSSL wired;
+// ESP32 reports unavailable). Format: SIG VOS1, SALT 16, IV 16, CIPHER,
+// HMAC 32.
 
 #pragma once
 #include <stdint.h>

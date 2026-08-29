@@ -1,9 +1,5 @@
-// app_fuzz.cpp — small HTTP request fuzzer (Raspberry Pi 5)
-//
-// Sub-modes:
-//   0. TARGET — pick from comma-separated `fuzz_targets` hal_storage list
-//   1. REPS   — pick request count from {16, 64, 256, 1024}
-//   2. RUN    — fire requests, log (target, status, latency_ms) to CSV
+// app_fuzz.cpp — small HTTP fuzzer.
+// TARGET / REPS / RUN -> CSV.
 
 #include "app_fuzz.h"
 #include "../UI/draw.h"

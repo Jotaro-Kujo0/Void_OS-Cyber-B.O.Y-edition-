@@ -1,10 +1,4 @@
-// app_wifi.cpp — base skeleton. See app_wifi.h for the full feature roadmap.
-//
-// Base behaviour: navigates a flat menu of the five Wi-Fi/BLE sub-modes.
-// Pressing A on a row flips the app into ACTIVE for that row; the active
-// row drives the status text. No real radio work happens until hal_wifi_*
-// and hal_ble_* are wired to nl80211/HCI — the comments at the top of
-// each HAL header describe what each function must do.
+// app_wifi.cpp — flat menu over hal_wifi/hal_ble sub-modes.
 
 #include "app_wifi.h"
 #include "UI/draw.h"
@@ -27,25 +21,7 @@ static const char *LABELS[] = {
 };
 static const uint8_t N_ROWS = sizeof(LABELS) / sizeof(LABELS[0]);
 
-// ── Sub-row implementation status ──────────────────────────────────
-//
-// PMKID (row 8): real impl feeds EAPOL-Key frames from
-// `hal_wifi_capture_consume` into a state machine that decodes the
-// RSN IE bytes 0..23 byte by byte. The PMKID is held in the
-// authenticator-tag field of message 1 of the 4-way handshake —
-// you only need that single message, no full 4-way. Output to
-// `/loot/pmkid.csv` as apmac,stamac,pmkid-hex. hashcat -m 16800
-// cracks it offline.
-//
-// WPS REAP (row 9): pixie-dust or online brute WPS PIN. Real impl
-// uses libpcap via tcpdump on Pi 5 (`-e -i wlan0mon type mgt
-// subtype probe-resp`) filtered for WPS IEs (vendor ext 0x00,0x50,
-// 0xF2,0x0A). For pixie-dust, follow the
-// https://github.com/wiire-a/pixiewps port: it needs the EAPOL enrol
-// registration M1...M8 hand-shake plus Diffie-Hellman components.
-// ponytail: STUB only. If your engagement requires it, vendor pixiewps
-// or `reaver-wps-fork-t6x` and feed its console through this row.
-//
+// ponytail: rows 8–9 (PMKID/WPS) are stubs; vendor+pixiewps if needed.
 
 static uint8_t _row = 0;
 static bool    _active = false;

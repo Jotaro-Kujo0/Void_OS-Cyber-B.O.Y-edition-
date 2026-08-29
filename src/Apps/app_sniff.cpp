@@ -1,13 +1,5 @@
 // app_sniff.cpp — URL/cookie sniffer + MITM toggle.
-//
-// Sub-modes:
-//   0. URL LOG — start a port-8080 listener; capture every HTTP request
-//                line and any `Cookie:` header. Append to
-//                /var/lib/void-os/loot/urls.csv.
-//
-//   1. COOKIES — read urls.csv and grep any `Cookie:` header into a
-//                /var/lib/void-os/loot/cookies.csv with `(host,cookie)`
-//                rows.
+// URL LOG / COOKIES -> loot csvs.
 //
 //   2. MITM EN — sysctl `net.ipv4.ip_forward=1` on Pi 5; this is the
 //                single most important toggle when the device is the
